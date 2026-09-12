@@ -5,7 +5,94 @@ namespace MedicalApp
 {
     class Program
     {
+        static void Run()
+        {
+            Console.WriteLine("Task 1: BMI Calculation");
+            Console.Write("Input weight (kg): ");
+            double weight = double.Parse(Console.ReadLine());
+
+            Console.Write("Input height (m): ");
+            double height = double.Parse(Console.ReadLine());
+
+            double bmi = CalculateBMI(weight, height);
+            string bmiCategory = GetBMICategory(bmi);
+            Console.WriteLine("BMI Result: " + bmiCategory);
+
+
+            Console.WriteLine("\nTask 2: Cost of Visits");
+            Console.Write("Input price for one visit: ");
+            double price = double.Parse(Console.ReadLine());
+
+            Console.Write("Input number of visits: ");
+            int count = int.Parse(Console.ReadLine());
+
+            Console.Write("Input discount (0-100): ");
+            int discount = int.Parse(Console.ReadLine());
+
+            double cost = CalculateCost(price, count, discount);
+            Console.WriteLine("Cost Result: " + cost);
+
+
+            Console.WriteLine("\nTask 3: patient age ");
+            Console.Write("Input patient's birth year: ");
+            int birthYear = int.Parse(Console.ReadLine());
+
+            int age = 2026 - birthYear;
+            string ageCategory = GetAgeCategory(age);
+            Console.WriteLine("Age Category: " + ageCategory);
+
+
+            Console.WriteLine("\nTask 4: blood pressure ");
+            Console.Write("Input systolic pressure (upper): ");
+            int systolic = int.Parse(Console.ReadLine());
+
+            Console.Write("Input diastolic pressure (lower): ");
+            int diastolic = int.Parse(Console.ReadLine());
+
+            string pressureStatus = GetPressureStatus(systolic, diastolic);
+            Console.WriteLine("Pressure Status: " + pressureStatus);
+        }
+
+
+        static double CalculateBMI(double weight, double height)
+        {
+            return weight / (height * height);
+        }
+
+        static string GetBMICategory(double bmi)
+        {
+            if (bmi < 18.5) return "low";
+            if (bmi < 25) return "normal";
+            if (bmi < 30) return "overweight";
+            return "obesity";
+        }
+
+        static double CalculateCost(double price, int count, int discount)
+        {
+            return price * count * (1 - (double)discount / 100);
+        }
+
+        static string GetAgeCategory(int age)
+        {
+            if (age <= 17) return "child";
+            if (age <= 59) return "adult";
+            return "senior";
+        }
+
+        static string GetPressureStatus(int systolic, int diastolic)
+        {
+            if (systolic < 120 && diastolic < 80) return "normal";
+            if (systolic < 130 && diastolic < 80) return "elevated";
+            if (systolic < 140 || diastolic < 90) return "hypertension stage 1";
+            return "hypertension stage 2";
+        }
+
         static void Main(string[] args)
+        {
+            Run();
+            Console.ReadLine();
+        }
+        static void Task7()
         {
             Console.Write("Input number of visits (e.g., 3): ");
             int n = int.Parse(Console.ReadLine());
@@ -17,7 +104,7 @@ namespace MedicalApp
             {
                 Console.Write("Input price for visit #" + (i + 1) + ": ");
                 prices[i] = double.Parse(Console.ReadLine());
-                sum += prices[i]; 
+                sum += prices[i];
             }
 
             double min = prices[0];
@@ -38,7 +125,6 @@ namespace MedicalApp
 
             Console.ReadLine();
         }
-
 
         static void Task6() {
             Console.Write("Input medical card number: ");
