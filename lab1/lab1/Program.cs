@@ -7,6 +7,28 @@ namespace MedicalApp
     {
         static void Main(string[] args)
         {
+            Console.Write("Input birth year: ");
+            int birthYear = int.Parse(Console.ReadLine());
+
+            int age = 2026 - birthYear;
+
+            if (age <= 17)
+            {
+                Console.WriteLine("child");
+            }
+            else if (age <= 59)
+            {
+                Console.WriteLine("adult");
+            }
+            else
+            {
+                Console.WriteLine("pensioner");
+            }
+
+            Console.ReadLine();
+        }
+        
+        static void Task2() {
             Console.Write("input price: ");
             double price = double.Parse(Console.ReadLine());
             Console.Write("input quantity: ");
