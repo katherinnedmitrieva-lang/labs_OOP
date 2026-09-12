@@ -7,6 +7,41 @@ namespace MedicalApp
     {
         static void Main(string[] args)
         {
+            Console.Write("Input (1-7): ");
+            int day = int.Parse(Console.ReadLine());
+            Console.Write("Schedule: ");
+            switch (day)
+            {
+                case 1:
+                    Console.WriteLine("Monday 08:00–18:00");
+                    break;
+                case 2:
+                    Console.WriteLine("Tuesday 08:00–18:00");
+                    break;
+                case 3:
+                    Console.WriteLine("Wednesday 09:00–17:00");
+                    break;
+                case 4:
+                    Console.WriteLine("Thursday 08:00–18:00");
+                    break;
+                case 5:
+                    Console.WriteLine("Friday 08:00–16:00");
+                    break;
+                case 6:
+                    Console.WriteLine("Saturday 09:00–14:00");
+                    break;
+                case 7:
+                    Console.WriteLine("Sunday off");
+                    break;
+                default:
+                    Console.WriteLine("Invalid day number");
+                    break;
+            }
+            Console.ReadLine();
+        }
+
+
+        static void Task4() {
             Console.Write("Enter systolic blood pressure (upper value, e.g., 120): ");
             int systolic = int.Parse(Console.ReadLine());
             Console.Write("Enter diastolic blood pressure (lower value, e.g., 80): ");
@@ -29,7 +64,6 @@ namespace MedicalApp
             }
             Console.ReadLine();
         }
-
 
         static void Task3()
         {
