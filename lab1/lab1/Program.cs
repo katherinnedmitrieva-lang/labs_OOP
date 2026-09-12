@@ -7,6 +7,36 @@ namespace MedicalApp
     {
         static void Main(string[] args)
         {
+            Console.Write("Input medical card number: ");
+            int number = int.Parse(Console.ReadLine());
+
+            Console.WriteLine("\nAnalysis Results");
+
+            int lastDigit = number % 10;
+
+            if (lastDigit == 0 || lastDigit == 1)
+                Console.WriteLine("Department: General Therapy");
+            else if (lastDigit == 2 || lastDigit == 3)
+                Console.WriteLine("Department: Surgery");
+            else if (lastDigit == 4 || lastDigit == 5)
+                Console.WriteLine("Department: Cardiology");
+            else if (lastDigit == 6 || lastDigit == 7)
+                Console.WriteLine("Department: Neurology");
+            else if (lastDigit == 8 || lastDigit == 9)
+                Console.WriteLine("Department: Ophthalmology");
+
+            if (number % 2 == 0)
+                Console.WriteLine("Discount card: yes");
+
+            if (number % 3 == 0)
+                Console.WriteLine("Routine examination: yes");
+
+            Console.ReadLine();
+        }
+
+
+        static void Task5()
+        {
             Console.Write("Input (1-7): ");
             int day = int.Parse(Console.ReadLine());
             Console.Write("Schedule: ");
@@ -39,7 +69,6 @@ namespace MedicalApp
             }
             Console.ReadLine();
         }
-
 
         static void Task4() {
             Console.Write("Enter systolic blood pressure (upper value, e.g., 120): ");
