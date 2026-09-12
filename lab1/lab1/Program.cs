@@ -7,6 +7,40 @@ namespace MedicalApp
     {
         static void Main(string[] args)
         {
+            Console.Write("Input number of visits (e.g., 3): ");
+            int n = int.Parse(Console.ReadLine());
+
+            double[] prices = new double[n];
+            double sum = 0;
+
+            for (int i = 0; i < n; i++)
+            {
+                Console.Write("Input price for visit #" + (i + 1) + ": ");
+                prices[i] = double.Parse(Console.ReadLine());
+                sum += prices[i]; 
+            }
+
+            double min = prices[0];
+            double max = prices[0];
+
+            for (int i = 1; i < n; i++)
+            {
+                if (prices[i] < min) min = prices[i];
+                if (prices[i] > max) max = prices[i];
+            }
+
+            double average = sum / n;
+
+            Console.WriteLine("Total sum of all visits: " + sum);
+            Console.WriteLine("Average cost of one visit: " + average);
+            Console.WriteLine("Minimum cost: " + min);
+            Console.WriteLine("Maximum cost: " + max);
+
+            Console.ReadLine();
+        }
+
+
+        static void Task6() {
             Console.Write("Input medical card number: ");
             int number = int.Parse(Console.ReadLine());
 
@@ -33,7 +67,6 @@ namespace MedicalApp
 
             Console.ReadLine();
         }
-
 
         static void Task5()
         {
