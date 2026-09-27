@@ -135,5 +135,11 @@ void RunDoctorsMenu(DoctorManager manager)
                 inMenu = false;
                 break;
         }
+        Console.WriteLine("\nТест Appointment (кінцевий автомат):");
+        Appointment testAppt = new Appointment(p1.Id, d1.Id, DateTime.Today.AddDays(1).AddHours(10));
+        Console.WriteLine(testAppt);
+        Console.WriteLine("Cancel(): " + testAppt.Cancel("Пацієнт не зміг прийти"));
+        Console.WriteLine(testAppt);
+        Console.WriteLine("Complete() після Cancel (має бути false): " + testAppt.Complete());
     }
 }
