@@ -1,39 +1,66 @@
 ﻿using ClinicApp;
+
 Console.OutputEncoding = System.Text.Encoding.UTF8;
-PatientManager patientManager = new PatientManager();
+
+Clinic clinic = new Clinic("Медична Клініка \"Здоров'я\"");
+
 Patient p1 = new Patient("Іван", "Петренко", new DateTime(1985, 3, 12), "A+", "0501234567");
 Patient p2 = new Patient("Олена", "Коваль", new DateTime(1993, 7, 4), "B-", "0672345678");
 Patient p3 = new Patient("Максим", "Бойко", new DateTime(2010, 1, 20), "O+", "0933456789");
 Patient p4 = new Patient();
 Patient p5 = new Patient("Марія", "Ткач");
-
-patientManager.Add(p1);
-patientManager.Add(p2);
-patientManager.Add(p3);
-patientManager.Add(p4);
-patientManager.Add(p5);
-
-DoctorManager doctorManager = new DoctorManager();
+clinic.Patients.Add(p1);
+clinic.Patients.Add(p2);
+clinic.Patients.Add(p3);
+clinic.Patients.Add(p4);
+clinic.Patients.Add(p5);
 
 Doctor d1 = new Doctor("Олег", "Сидоренко", "Кардіологія", "LIC-001", "0441234567");
-d1.WorkStartHour = 8;
-d1.WorkEndHour = 16;
+d1.WorkStartHour = 8; d1.WorkEndHour = 16;
 Doctor d2 = new Doctor("Наталія", "Мороз", "Неврологія", "LIC-002", "0442345678");
-d2.WorkStartHour = 9;
-d2.WorkEndHour = 18;
+d2.WorkStartHour = 9; d2.WorkEndHour = 18;
 Doctor d3 = new Doctor("Андрій", "Власенко", "Педіатрія", "LIC-003", "0443456789");
-
-doctorManager.Add(d1);
-doctorManager.Add(d2);
-doctorManager.Add(d3);
-AppointmentManager appointmentManager = new AppointmentManager(patientManager, doctorManager);
+clinic.Doctors.Add(d1);
+clinic.Doctors.Add(d2);
+clinic.Doctors.Add(d3);
 
 DateTime baseDate = DateTime.Today.AddDays(1);
-appointmentManager.Book(p1.Id, d1.Id, baseDate.AddHours(10), 30);
-appointmentManager.Book(p2.Id, d2.Id, baseDate.AddHours(11), 45);
-appointmentManager.Book(p3.Id, d3.Id, baseDate.AddDays(1).AddHours(9), 20);
+clinic.Appointments.Book(p1.Id, d1.Id, baseDate.AddHours(10), 30);
+clinic.Appointments.Book(p2.Id, d2.Id, baseDate.AddHours(11), 45);
+clinic.Appointments.Book(p3.Id, d3.Id, baseDate.AddDays(1).AddHours(9), 20);
 
-RunPatientsMenu(patientManager);
+RunMainMenu(clinic);
+
+void RunMainMenu(Clinic activeClinic)
+{
+    bool running = true;
+    while (running)
+    {
+        Console.WriteLine("\nГОЛОВНЕ МЕНЮ");
+        Console.WriteLine("1. Пацієнти");
+        Console.WriteLine("2. Лікарі");
+        Console.WriteLine("3. Записи");
+        Console.WriteLine("4. Розклад на дату");
+        Console.WriteLine("5. Звіт клініки");
+        Console.WriteLine("0. Вихід");
+        Console.Write("Ваш вибір: ");
+        string choice = Console.ReadLine()!;
+
+        switch (choice)
+        {
+            case "1": RunPatientsMenu(activeClinic.Patients); break;
+            case "2": RunDoctorsMenu(activeClinic.Doctors); break;
+            case "3": RunAppointmentsMenu(activeClinic.Appointments, activeClinic.Patients, activeClinic.Doctors); break;
+            case "4":
+                Console.Write("Дата (дд.мм.рррр): ");
+                if (DateTime.TryParse(Console.ReadLine()!, out DateTime date))
+                    activeClinic.DisplaySchedule(date);
+                break;
+            case "5": activeClinic.GenerateReport(); break;
+            case "0": running = false; break;
+        }
+    }
+}
 
 void RunPatientsMenu(PatientManager manager)
 {
@@ -49,24 +76,16 @@ void RunPatientsMenu(PatientManager manager)
         Console.WriteLine("0. Назад");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
-
         switch (choice)
         {
-            case "1":
-                manager.DisplayAll();
-                break;
+            case "1": manager.DisplayAll(); break;
             case "2":
-                Console.Write("Ім'я: ");
-                string firstName = Console.ReadLine()!;
-                Console.Write("Прізвище: ");
-                string lastName = Console.ReadLine()!;
-                Console.Write("Дата народження (дд.мм.рррр): ");
-                DateTime.TryParse(Console.ReadLine()!, out DateTime dob);
-                Console.Write("Група крові: ");
-                string bloodType = Console.ReadLine()!;
-                Console.Write("Телефон: ");
-                string phone = Console.ReadLine()!;
-                manager.Add(new Patient(firstName, lastName, dob, bloodType, phone));
+                Console.Write("Ім'я: "); string fn = Console.ReadLine()!;
+                Console.Write("Прізвище: "); string ln = Console.ReadLine()!;
+                Console.Write("Дата народження: "); DateTime.TryParse(Console.ReadLine()!, out DateTime dob);
+                Console.Write("Група крові: "); string bt = Console.ReadLine()!;
+                Console.Write("Телефон: "); string ph = Console.ReadLine()!;
+                manager.Add(new Patient(fn, ln, dob, bt, ph));
                 break;
             case "3":
                 Console.Write("Частина імені: ");
@@ -75,20 +94,14 @@ void RunPatientsMenu(PatientManager manager)
                 else foreach (Patient p in found) Console.WriteLine(p);
                 break;
             case "4":
-                Console.Write("ID: ");
-                int.TryParse(Console.ReadLine()!, out int removeId);
-                Console.WriteLine(manager.Remove(removeId) ? "Видалено." : "Не знайдено.");
+                Console.Write("ID: "); int.TryParse(Console.ReadLine()!, out int rid);
+                Console.WriteLine(manager.Remove(rid) ? "Видалено." : "Не знайдено.");
                 break;
-            case "5":
-                manager.DisplayStats();
-                break;
-            case "0":
-                inMenu = false;
-                break;
+            case "5": manager.DisplayStats(); break;
+            case "0": inMenu = false; break;
         }
     }
 }
-RunDoctorsMenu(doctorManager);
 
 void RunDoctorsMenu(DoctorManager manager)
 {
@@ -104,24 +117,16 @@ void RunDoctorsMenu(DoctorManager manager)
         Console.WriteLine("0. Назад");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
-
         switch (choice)
         {
-            case "1":
-                manager.DisplayAll();
-                break;
+            case "1": manager.DisplayAll(); break;
             case "2":
-                Console.Write("Ім'я: ");
-                string firstName = Console.ReadLine()!;
-                Console.Write("Прізвище: ");
-                string lastName = Console.ReadLine()!;
-                Console.Write("Спеціальність: ");
-                string speciality = Console.ReadLine()!;
-                Console.Write("Ліцензія: ");
-                string license = Console.ReadLine()!;
-                Console.Write("Телефон: ");
-                string phone = Console.ReadLine()!;
-                manager.Add(new Doctor(firstName, lastName, speciality, license, phone));
+                Console.Write("Ім'я: "); string fn = Console.ReadLine()!;
+                Console.Write("Прізвище: "); string ln = Console.ReadLine()!;
+                Console.Write("Спеціальність: "); string sp = Console.ReadLine()!;
+                Console.Write("Ліцензія: "); string lic = Console.ReadLine()!;
+                Console.Write("Телефон: "); string ph = Console.ReadLine()!;
+                manager.Add(new Doctor(fn, ln, sp, lic, ph));
                 break;
             case "3":
                 Console.Write("Спеціальність: ");
@@ -130,20 +135,14 @@ void RunDoctorsMenu(DoctorManager manager)
                 else foreach (Doctor d in found) Console.WriteLine(d);
                 break;
             case "4":
-                Console.Write("ID: ");
-                int.TryParse(Console.ReadLine()!, out int removeId);
-                Console.WriteLine(manager.Remove(removeId) ? "Видалено." : "Не знайдено.");
+                Console.Write("ID: "); int.TryParse(Console.ReadLine()!, out int rid);
+                Console.WriteLine(manager.Remove(rid) ? "Видалено." : "Не знайдено.");
                 break;
-            case "5":
-                manager.DisplayStats();
-                break;
-            case "0":
-                inMenu = false;
-                break;
+            case "5": manager.DisplayStats(); break;
+            case "0": inMenu = false; break;
         }
     }
-    }
-RunAppointmentsMenu(appointmentManager, patientManager, doctorManager);
+}
 
 void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, DoctorManager doctors)
 {
@@ -158,36 +157,25 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
         Console.WriteLine("0. Назад");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
-
         switch (choice)
         {
-            case "1":
-                manager.DisplayList(manager.GetUpcoming());
-                break;
+            case "1": manager.DisplayList(manager.GetUpcoming()); break;
             case "2":
-                patients.DisplayAll();
-                doctors.DisplayAll();
-                Console.Write("ID пацієнта: ");
-                int.TryParse(Console.ReadLine()!, out int patientId);
-                Console.Write("ID лікаря: ");
-                int.TryParse(Console.ReadLine()!, out int doctorId);
-                Console.Write("Дата та час (дд.мм.рррр гг:хх): ");
-                DateTime.TryParse(Console.ReadLine()!, out DateTime scheduledAt);
-                manager.Book(patientId, doctorId, scheduledAt);
+                patients.DisplayAll(); doctors.DisplayAll();
+                Console.Write("ID пацієнта: "); int.TryParse(Console.ReadLine()!, out int pid);
+                Console.Write("ID лікаря: "); int.TryParse(Console.ReadLine()!, out int did);
+                Console.Write("Дата та час: "); DateTime.TryParse(Console.ReadLine()!, out DateTime sched);
+                manager.Book(pid, did, sched);
                 break;
             case "3":
-                Console.Write("ID запису: ");
-                int.TryParse(Console.ReadLine()!, out int cancelId);
-                manager.Cancel(cancelId);
+                Console.Write("ID запису: "); int.TryParse(Console.ReadLine()!, out int cid);
+                manager.Cancel(cid);
                 break;
             case "4":
-                Console.Write("ID запису: ");
-                int.TryParse(Console.ReadLine()!, out int completeId);
-                manager.Complete(completeId);
+                Console.Write("ID запису: "); int.TryParse(Console.ReadLine()!, out int fid);
+                manager.Complete(fid);
                 break;
-            case "0":
-                inMenu = false;
-                break;
+            case "0": inMenu = false; break;
         }
     }
 }
