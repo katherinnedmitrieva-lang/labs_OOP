@@ -26,6 +26,12 @@ Doctor d3 = new Doctor("Андрій", "Власенко", "Педіатрія",
 doctorManager.Add(d1);
 doctorManager.Add(d2);
 doctorManager.Add(d3);
+AppointmentManager appointmentManager = new AppointmentManager(patientManager, doctorManager);
+
+DateTime baseDate = DateTime.Today.AddDays(1);
+appointmentManager.Book(p1.Id, d1.Id, baseDate.AddHours(10), 30);
+appointmentManager.Book(p2.Id, d2.Id, baseDate.AddHours(11), 45);
+appointmentManager.Book(p3.Id, d3.Id, baseDate.AddDays(1).AddHours(9), 20);
 
 RunPatientsMenu(patientManager);
 
@@ -135,11 +141,53 @@ void RunDoctorsMenu(DoctorManager manager)
                 inMenu = false;
                 break;
         }
-        Console.WriteLine("\nТест Appointment (кінцевий автомат):");
-        Appointment testAppt = new Appointment(p1.Id, d1.Id, DateTime.Today.AddDays(1).AddHours(10));
-        Console.WriteLine(testAppt);
-        Console.WriteLine("Cancel(): " + testAppt.Cancel("Пацієнт не зміг прийти"));
-        Console.WriteLine(testAppt);
-        Console.WriteLine("Complete() після Cancel (має бути false): " + testAppt.Complete());
+    }
+    }
+RunAppointmentsMenu(appointmentManager, patientManager, doctorManager);
+
+void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, DoctorManager doctors)
+{
+    bool inMenu = true;
+    while (inMenu)
+    {
+        Console.WriteLine("\nЗаписи:");
+        Console.WriteLine("1. Майбутні записи");
+        Console.WriteLine("2. Новий запис");
+        Console.WriteLine("3. Скасувати запис");
+        Console.WriteLine("4. Завершити запис");
+        Console.WriteLine("0. Назад");
+        Console.Write("Ваш вибір: ");
+        string choice = Console.ReadLine()!;
+
+        switch (choice)
+        {
+            case "1":
+                manager.DisplayList(manager.GetUpcoming());
+                break;
+            case "2":
+                patients.DisplayAll();
+                doctors.DisplayAll();
+                Console.Write("ID пацієнта: ");
+                int.TryParse(Console.ReadLine()!, out int patientId);
+                Console.Write("ID лікаря: ");
+                int.TryParse(Console.ReadLine()!, out int doctorId);
+                Console.Write("Дата та час (дд.мм.рррр гг:хх): ");
+                DateTime.TryParse(Console.ReadLine()!, out DateTime scheduledAt);
+                manager.Book(patientId, doctorId, scheduledAt);
+                break;
+            case "3":
+                Console.Write("ID запису: ");
+                int.TryParse(Console.ReadLine()!, out int cancelId);
+                manager.Cancel(cancelId);
+                break;
+            case "4":
+                Console.Write("ID запису: ");
+                int.TryParse(Console.ReadLine()!, out int completeId);
+                manager.Complete(completeId);
+                break;
+            case "0":
+                inMenu = false;
+                break;
+        }
     }
 }
