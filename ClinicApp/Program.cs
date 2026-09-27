@@ -13,6 +13,8 @@ patientManager.Add(p3);
 patientManager.Add(p4);
 patientManager.Add(p5);
 
+DoctorManager doctorManager = new DoctorManager();
+
 Doctor d1 = new Doctor("Олег", "Сидоренко", "Кардіологія", "LIC-001", "0441234567");
 d1.WorkStartHour = 8;
 d1.WorkEndHour = 16;
@@ -21,10 +23,9 @@ d2.WorkStartHour = 9;
 d2.WorkEndHour = 18;
 Doctor d3 = new Doctor("Андрій", "Власенко", "Педіатрія", "LIC-003", "0443456789");
 
-Console.WriteLine();
-Console.WriteLine(d1);
-Console.WriteLine(d2);
-Console.WriteLine(d3);
+doctorManager.Add(d1);
+doctorManager.Add(d2);
+doctorManager.Add(d3);
 
 RunPatientsMenu(patientManager);
 
@@ -66,6 +67,61 @@ void RunPatientsMenu(PatientManager manager)
                 Patient[] found = manager.FindByName(Console.ReadLine()!);
                 if (found.Length == 0) Console.WriteLine("Нікого не знайдено.");
                 else foreach (Patient p in found) Console.WriteLine(p);
+                break;
+            case "4":
+                Console.Write("ID: ");
+                int.TryParse(Console.ReadLine()!, out int removeId);
+                Console.WriteLine(manager.Remove(removeId) ? "Видалено." : "Не знайдено.");
+                break;
+            case "5":
+                manager.DisplayStats();
+                break;
+            case "0":
+                inMenu = false;
+                break;
+        }
+    }
+}
+RunDoctorsMenu(doctorManager);
+
+void RunDoctorsMenu(DoctorManager manager)
+{
+    bool inMenu = true;
+    while (inMenu)
+    {
+        Console.WriteLine("\nЛікарі:");
+        Console.WriteLine("1. Показати всіх");
+        Console.WriteLine("2. Додати лікаря");
+        Console.WriteLine("3. Знайти за спеціальністю");
+        Console.WriteLine("4. Видалити за ID");
+        Console.WriteLine("5. Статистика");
+        Console.WriteLine("0. Назад");
+        Console.Write("Ваш вибір: ");
+        string choice = Console.ReadLine()!;
+
+        switch (choice)
+        {
+            case "1":
+                manager.DisplayAll();
+                break;
+            case "2":
+                Console.Write("Ім'я: ");
+                string firstName = Console.ReadLine()!;
+                Console.Write("Прізвище: ");
+                string lastName = Console.ReadLine()!;
+                Console.Write("Спеціальність: ");
+                string speciality = Console.ReadLine()!;
+                Console.Write("Ліцензія: ");
+                string license = Console.ReadLine()!;
+                Console.Write("Телефон: ");
+                string phone = Console.ReadLine()!;
+                manager.Add(new Doctor(firstName, lastName, speciality, license, phone));
+                break;
+            case "3":
+                Console.Write("Спеціальність: ");
+                Doctor[] found = manager.FindBySpeciality(Console.ReadLine()!);
+                if (found.Length == 0) Console.WriteLine("Нікого не знайдено.");
+                else foreach (Doctor d in found) Console.WriteLine(d);
                 break;
             case "4":
                 Console.Write("ID: ");
