@@ -42,6 +42,7 @@ void RunMainMenu(Clinic activeClinic)
         Console.WriteLine("3. Записи");
         Console.WriteLine("4. Розклад на дату");
         Console.WriteLine("5. Звіт клініки");
+        Console.WriteLine("6. Тест GrowablePatientManager");
         Console.WriteLine("0. Вихід");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
@@ -57,6 +58,7 @@ void RunMainMenu(Clinic activeClinic)
                     activeClinic.DisplaySchedule(date);
                 break;
             case "5": activeClinic.GenerateReport(); break;
+            case "6": RunGrowableDemo(); break;
             case "0": running = false; break;
         }
     }
@@ -177,5 +179,16 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
                 break;
             case "0": inMenu = false; break;
         }
+    }
+}
+void RunGrowableDemo()
+{
+    Console.WriteLine("\nТест GrowablePatientManager:");
+    GrowablePatientManager growable = new GrowablePatientManager();
+    for (int i = 1; i <= 20; i++)
+    {
+        Patient testPatient = new Patient("Тест", $"Пацієнт{i}");
+        growable.Add(testPatient);
+        Console.WriteLine($"  Додано [{testPatient.Id}]. Розмір: {growable.Count} / {growable.Capacity}");
     }
 }
