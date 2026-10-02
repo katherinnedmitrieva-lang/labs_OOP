@@ -30,5 +30,8 @@ public struct WorkSchedule
         return hour >= Start && hour < End;
     }
 
-    public override string ToString() => Display;
+    public override string ToString()
+    {
+        return Display + " (" + HoursPerDay + " год)";
+    }
 }
