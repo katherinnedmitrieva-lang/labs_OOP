@@ -24,14 +24,14 @@ public static class ClinicFormatter
     {
         switch (s)
         {
-            case Speciality.Therapist: return "Терапія";
-            case Speciality.Cardiologist: return "Кардіологія";
-            case Speciality.Pediatrician: return "Педіатрія";
-            case Speciality.Surgeon: return "Хірургія";
-            case Speciality.Neurologist: return "Неврологія";
-            case Speciality.Dermatologist: return "Дерматологія";
-            case Speciality.Ophthalmologist: return "Офтальмологія";
-            case Speciality.Dentist: return "Стоматологія";
+            case Speciality.Therapist: return "Терапевт";
+            case Speciality.Cardiologist: return "Кардіолог";
+            case Speciality.Pediatrician: return "Педіатр";
+            case Speciality.Surgeon: return "Хірург";
+            case Speciality.Neurologist: return "Невролог";
+            case Speciality.Dermatologist: return "Дерматолог";
+            case Speciality.Ophthalmologist: return "Офтальмолог";
+            case Speciality.Dentist: return "Стоматолог";
             default: return "Загальна практика";
         }
     }
@@ -39,7 +39,7 @@ public static class ClinicFormatter
     public static string FormatAge(int age)
     {
         int mod100 = age % 100;
-        if (mod100 >= 11 && mod100 <= 14) return $"{age} років";
+        if (mod100 >= 11 && mod100 <= 19) return $"{age} років";
 
         int mod10 = age % 10;
         if (mod10 == 1) return $"{age} рік";
