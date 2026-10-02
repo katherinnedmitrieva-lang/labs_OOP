@@ -10,14 +10,11 @@ public class DoctorManager
 
     public int Count => _count;
 
-    public Doctor this[int index]
+    public Doctor? this[int index]
     {
         get
         {
-            if (index < 0 || index >= _count)
-            {
-                throw new IndexOutOfRangeException("Індекс знаходиться поза межами списку лікарів.");
-            }
+            if (index < 0 || index >= _count) return null;
             return _doctors[index];
         }
     }
@@ -45,16 +42,8 @@ public class DoctorManager
 
     public bool TryFindById(int id, out Doctor? doctor)
     {
-        for (int i = 0; i < _count; i++)
-        {
-            if (_doctors[i].Id == id)
-            {
-                doctor = _doctors[i];
-                return true;
-            }
-        }
-        doctor = null;
-        return false;
+        doctor = FindById(id);
+        return doctor != null;
     }
 
     public Doctor[] FindBySpeciality(string speciality)
@@ -63,16 +52,14 @@ public class DoctorManager
         int matchCount = 0;
         for (int i = 0; i < _count; i++)
         {
-            string ukrSpec = ClinicFormatter.FormatSpeciality(_doctors[i].Speciality).ToLower();
-            if (ukrSpec.Contains(search)) matchCount++;
+            if (_doctors[i].Speciality.ToString().ToLower().Contains(search)) matchCount++;
         }
 
         Doctor[] result = new Doctor[matchCount];
         int index = 0;
         for (int i = 0; i < _count; i++)
         {
-            string ukrSpec = ClinicFormatter.FormatSpeciality(_doctors[i].Speciality).ToLower();
-            if (ukrSpec.Contains(search))
+            if (_doctors[i].Speciality.ToString().ToLower().Contains(search))
             {
                 result[index] = _doctors[i];
                 index++;

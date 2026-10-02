@@ -18,7 +18,7 @@ clinic.Patients.Add(p5);
 
 Doctor d1 = new Doctor("Олег", "Сидоренко", Speciality.Cardiologist, "LIC-001", "0441234567");
 d1.Schedule = new WorkSchedule(8, 16);
-Doctor d2 = new Doctor("Наталія", "Мороз", Speciality.Neurologist, "LIC-002", "0442345678");
+Doctor d2 = new Doctor("Nataliya", "Moroz", Speciality.Neurologist, "LIC-002", "0442345678");
 d2.Schedule = new WorkSchedule(9, 18);
 Doctor d3 = new Doctor("Андрій", "Власенко", Speciality.Pediatrician, "LIC-003", "0443456789");
 clinic.Doctors.Add(d1);
@@ -29,18 +29,25 @@ DateTime baseDate = DateTime.Today.AddDays(1);
 clinic.Appointments.Book(p1.Id, d1.Id, baseDate.AddHours(10), 30);
 clinic.Appointments.Book(p2.Id, d2.Id, baseDate.AddHours(11), 45);
 clinic.Appointments.Book(p3.Id, d3.Id, baseDate.AddDays(1).AddHours(9), 20);
-Doctor testIndexer = clinic.Doctors[0];
-Console.WriteLine("\nТЕСТ ЗАВДАННЯ 4 (Оператори ?. та ??)");
 
-Doctor? sampleDoctor;
-bool isFound = clinic.Doctors.TryFindById(999, out sampleDoctor);
+WorkSchedule morning = new WorkSchedule(8, 12);
+WorkSchedule copy = morning;
+copy = new WorkSchedule(9, 14);
 
-string? docName = sampleDoctor?.FullName;
-string outputString = docName ?? "Повідомлення: Лікаря з ID 999 не знайдено в базі даних.";
+string testAge = ClinicFormatter.FormatAge(21);
+string testBlood = ClinicFormatter.FormatBloodType(BloodType.APositive);
 
-Console.WriteLine($"Статус пошуку лікаря: {isFound}");
-Console.WriteLine($"Виведення на екран: {outputString}");
-Console.WriteLine(new string('═', 45));
+Doctor? testIndexerDoc = clinic.Doctors[0];
+Patient? testIndexerPat = clinic.Patients[0];
+
+string? checkNullConditional = clinic.Patients.FindById(99)?.FullName;
+string checkNullCoalescing = clinic.Patients.FindById(99)?.FullName ?? "";
+
+clinic.Patients.TryFindById(1, out Patient? foundPatient);
+
+Doctor[] searchByEnum = clinic.Doctors.FindBySpeciality(Speciality.Cardiologist);
+Doctor[] searchByString = clinic.Doctors.FindBySpeciality("кардіо");
+Appointment[] searchByTripleIntDate = clinic.Appointments.GetByDate(2026, 5, 10);
 
 RunMainMenu(clinic);
 
@@ -166,6 +173,12 @@ void RunDoctorsMenu(DoctorManager manager)
                 string searchInput = Console.ReadLine()!;
 
                 if (Enum.TryParse(searchInput, true, out Speciality searchSpec))
+                {
+                    Doctor[] foundDocs = manager.FindBySpeciality(searchSpec);
+                    if (foundDocs.Length == 0) Console.WriteLine("Нікого не знайдено.");
+                    else foreach (Doctor d in foundDocs) Console.WriteLine(d);
+                }
+                else
                 {
                     Doctor[] foundDocs = manager.FindBySpeciality(searchInput);
                     if (foundDocs.Length == 0) Console.WriteLine("Нікого не знайдено.");

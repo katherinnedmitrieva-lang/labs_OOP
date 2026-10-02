@@ -13,14 +13,11 @@ public class AppointmentManager
 
     public int Count => _count;
 
-    public Appointment this[int index]
+    public Appointment? this[int index]
     {
         get
         {
-            if (index < 0 || index >= _count)
-            {
-                throw new IndexOutOfRangeException("Індекс поза межами масиву записів.");
-            }
+            if (index < 0 || index >= _count) return null;
             return _appointments[index];
         }
     }
@@ -57,16 +54,8 @@ public class AppointmentManager
 
     public bool TryFindById(int id, out Appointment? appointment)
     {
-        for (int i = 0; i < _count; i++)
-        {
-            if (_appointments[i].Id == id)
-            {
-                appointment = _appointments[i];
-                return true;
-            }
-        }
-        appointment = null;
-        return false;
+        appointment = FindById(id);
+        return appointment != null;
     }
 
     public Appointment[] GetUpcoming()
@@ -113,27 +102,7 @@ public class AppointmentManager
 
     public Appointment[] GetByDate(int year, int month, int day)
     {
-        int matchCount = 0;
-        for (int i = 0; i < _count; i++)
-        {
-            if (_appointments[i].ScheduledAt.Year == year &&
-                _appointments[i].ScheduledAt.Month == month &&
-                _appointments[i].ScheduledAt.Day == day) matchCount++;
-        }
-
-        Appointment[] result = new Appointment[matchCount];
-        int index = 0;
-        for (int i = 0; i < _count; i++)
-        {
-            if (_appointments[i].ScheduledAt.Year == year &&
-                _appointments[i].ScheduledAt.Month == month &&
-                _appointments[i].ScheduledAt.Day == day)
-            {
-                result[index] = _appointments[i];
-                index++;
-            }
-        }
-        return result;
+        return GetByDate(new DateTime(year, month, day));
     }
 
     public bool Cancel(int id, string reason = "")

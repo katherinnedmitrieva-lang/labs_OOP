@@ -10,14 +10,11 @@ public class PatientManager
 
     public int Count => _count;
 
-    public Patient this[int index]
+    public Patient? this[int index]
     {
         get
         {
-            if (index < 0 || index >= _count)
-            {
-                throw new IndexOutOfRangeException("Індекс поза межами масиву пацієнтів.");
-            }
+            if (index < 0 || index >= _count) return null;
             return _patients[index];
         }
     }
@@ -45,16 +42,8 @@ public class PatientManager
 
     public bool TryFindById(int id, out Patient? patient)
     {
-        for (int i = 0; i < _count; i++)
-        {
-            if (_patients[i].Id == id)
-            {
-                patient = _patients[i];
-                return true;
-            }
-        }
-        patient = null;
-        return false;
+        patient = FindById(id);
+        return patient != null;
     }
 
     public Patient[] FindByName(string name)
