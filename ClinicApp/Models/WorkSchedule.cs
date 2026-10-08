@@ -2,7 +2,6 @@
 
 namespace ClinicApp.Models;
 
-
 public struct WorkSchedule
 {
     public int Start { get; }
@@ -10,16 +9,15 @@ public struct WorkSchedule
 
     public WorkSchedule(int start, int end)
     {
-        if (start >= end || start < 0 || end > 24)
-        {
-            Start = 8;
-            End = 17;
-        }
-        else
-        {
-            Start = start;
-            End = end;
-        }
+        if (start < 0 || start > 23)
+            throw new ArgumentOutOfRangeException(nameof(start), "Початок роботи має бути від 0 до 23.");
+        if (end < 1 || end > 24)
+            throw new ArgumentOutOfRangeException(nameof(end), "Кінець роботи має бути від 1 до 24.");
+        if (start >= end)
+            throw new ArgumentException("Початок роботи має бути раніше за кінець.");
+
+        Start = start;
+        End = end;
     }
 
     public int HoursPerDay => End - Start;
