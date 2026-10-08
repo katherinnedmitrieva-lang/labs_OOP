@@ -1,6 +1,7 @@
 ﻿using System;
 
-namespace ClinicApp;
+namespace ClinicApp.Models;
+
 
 public struct WorkSchedule
 {

@@ -1,6 +1,8 @@
 ﻿using System;
+using ClinicApp.Enums;
 
-namespace ClinicApp;
+namespace ClinicApp.Utils;
+
 
 public static class ClinicFormatter
 {

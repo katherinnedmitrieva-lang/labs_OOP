@@ -1,6 +1,8 @@
 using System;
+using ClinicApp.Enums;
+using ClinicApp.Utils;
 
-namespace ClinicApp;
+namespace ClinicApp.Models;
 
 public class Patient
 {
