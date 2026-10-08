@@ -1,23 +1,45 @@
-﻿
-using System;
+﻿using System;
 using ClinicApp.Enums;
 using ClinicApp.Utils;
 
 namespace ClinicApp.Models;
 
-
 public class Doctor
 {
     private static int _nextId = 1;
 
-    public int Id { get; }
-    public string FirstName { get; set; }
-    public string LastName { get; set; }
-    public Speciality Speciality { get; set; }
-    public string LicenseNumber { get; set; }
-    public string Phone { get; set; }
+    private string _firstName = "";
+    private string _lastName = "";
+    private string _licenseNumber = "";
+    private string _phone = "";
 
+    public int Id { get; }
+    public Speciality Speciality { get; set; }
     public WorkSchedule Schedule { get; set; }
+
+    public string FirstName
+    {
+        get => _firstName;
+        set => _firstName = value;
+    }
+
+    public string LastName
+    {
+        get => _lastName;
+        set => _lastName = value;
+    }
+
+    public string LicenseNumber
+    {
+        get => _licenseNumber;
+        set => _licenseNumber = value;
+    }
+
+    public string Phone
+    {
+        get => _phone;
+        set => _phone = value;
+    }
 
     public string FullName => FirstName + " " + LastName;
 
@@ -58,5 +80,4 @@ public class Doctor
         string phoneText = ClinicFormatter.FormatPhone(Phone);
         return $"[{Id}] {FullName} | {specText} | {LicenseNumber} | Тел: {phoneText} | {WorkSchedule} ({WorkingHoursPerDay} god) | {status}";
     }
-
 }

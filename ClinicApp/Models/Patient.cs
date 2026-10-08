@@ -8,13 +8,38 @@ public class Patient
 {
     private static int _nextId = 1;
 
+    private string _firstName = "";
+    private string _lastName = "";
+    private DateTime _dateOfBirth;
+    private string _phone = "";
+
     public int Id { get; }
-    public string FirstName { get; set; }
-    public string LastName { get; set; }
-    public DateTime DateOfBirth { get; set; }
     public BloodType BloodType { get; set; }
-    public string Phone { get; set; }
     public string Email { get; set; }
+
+    public string FirstName
+    {
+        get => _firstName;
+        set => _firstName = value;
+    }
+
+    public string LastName
+    {
+        get => _lastName;
+        set => _lastName = value;
+    }
+
+    public DateTime DateOfBirth
+    {
+        get => _dateOfBirth;
+        set => _dateOfBirth = value;
+    }
+
+    public string Phone
+    {
+        get => _phone;
+        set => _phone = value;
+    }
 
     public string FullName => FirstName + " " + LastName;
 
@@ -49,7 +74,7 @@ public class Patient
         FirstName = firstName;
         LastName = lastName;
         DateOfBirth = dateOfBirth;
-        BloodType = bloodType; 
+        BloodType = bloodType;
         Phone = phone;
         Email = "";
     }
@@ -68,5 +93,4 @@ public class Patient
         string phoneText = ClinicFormatter.FormatPhone(Phone);
         return $"[{Id}] {FullName} | Вік: {ageText} ({GetAgeCategory()}) | Кров: {bloodText} | Тел: {phoneText}";
     }
-
 }
