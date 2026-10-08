@@ -12,10 +12,19 @@ public class Patient
     private string _lastName = "";
     private DateTime _dateOfBirth;
     private string _phone = "";
-
+    private string _email = "";
     public int Id { get; }
     public BloodType BloodType { get; set; }
-    public string Email { get; set; }
+    public string Email
+    {
+        get => _email;
+        set
+        {
+            if (value.Length > 0)                    // порожній = «email невідомий», дозволено
+                ClinicValidator.ValidateEmail(value);
+            _email = value;
+        }
+    }
 
     public string FirstName
     {
