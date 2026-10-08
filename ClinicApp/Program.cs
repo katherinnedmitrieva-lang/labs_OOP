@@ -106,18 +106,30 @@ void RunPatientsMenu(PatientManager manager)
         {
             case "1": manager.DisplayAll(); break;
             case "2":
-                Console.Write("Ім'я: "); string fn = Console.ReadLine()!;
-                Console.Write("Прізвище: "); string ln = Console.ReadLine()!;
-                Console.Write("Дата народження: "); DateTime.TryParse(Console.ReadLine()!, out DateTime dob);
-
-                Console.Write("Група крові (напр. APositive, BNegative, Unknown): ");
-                if (!Enum.TryParse(Console.ReadLine()!, true, out BloodType bType))
+                try
                 {
-                    bType = BloodType.Unknown;
-                }
+                    Console.Write("Ім'я: "); string fn = Console.ReadLine()!;
+                    Console.Write("Прізвище: "); string ln = Console.ReadLine()!;
+                    Console.Write("Дата народження: "); DateTime.TryParse(Console.ReadLine()!, out DateTime dob);
 
-                Console.Write("Телефон: "); string ph = Console.ReadLine()!;
-                manager.Add(new Patient(fn, ln, dob, bType, ph));
+                    Console.Write("Група крові (напр. APositive, BNegative, Unknown): ");
+                    if (!Enum.TryParse(Console.ReadLine()!, true, out BloodType bType)
+                        || !Enum.IsDefined(typeof(BloodType), bType))
+                    {
+                        bType = BloodType.Unknown;
+                    }
+
+                    Console.Write("Телефон: "); string ph = Console.ReadLine()!;
+                    manager.Add(new Patient(fn, ln, dob, bType, ph));
+                }
+                catch (ArgumentOutOfRangeException e)
+                {
+                    Console.WriteLine("Помилка (значення поза межами): " + e.Message);
+                }
+                catch (ArgumentException e)
+                {
+                    Console.WriteLine("Помилка: " + e.Message);
+                }
                 break;
             case "3":
                 Console.Write("Частина імені: ");
@@ -153,24 +165,38 @@ void RunDoctorsMenu(DoctorManager manager)
         {
             case "1": manager.DisplayAll(); break;
             case "2":
-                Console.Write("Ім'я: "); string fn = Console.ReadLine()!;
-                Console.Write("Прізвище: "); string ln = Console.ReadLine()!;
-
-                Console.Write("Спеціальність (напр. Therapist, Cardiologist, Pediatrician): ");
-                if (!Enum.TryParse(Console.ReadLine()!, true, out Speciality spec))
+                try
                 {
-                    spec = Speciality.Therapist;
+                    Console.Write("Ім'я: "); string fn = Console.ReadLine()!;
+                    Console.Write("Прізвище: "); string ln = Console.ReadLine()!;
+
+                    Console.Write("Спеціальність (напр. Therapist, Cardiologist, Pediatrician): ");
+                    if (!Enum.TryParse(Console.ReadLine()!, true, out Speciality spec)
+                        || !Enum.IsDefined(typeof(Speciality), spec))
+                    {
+                        spec = Speciality.Therapist;
+                    }
+
+                    Console.Write("Ліцензія: "); string lic = Console.ReadLine()!;
+                    Console.Write("Телефон: "); string ph = Console.ReadLine()!;
+
+                    Console.Write("Година початку роботи: "); int.TryParse(Console.ReadLine()!, out int startH);
+                    Console.Write("Година кінця роботи: "); int.TryParse(Console.ReadLine()!, out int endH);
+
+                    // розклад створюємо ДО лікаря: якщо години некоректні — Id лікаря не витрачається
+                    WorkSchedule schedule = new WorkSchedule(startH, endH);
+                    Doctor newDoc = new Doctor(fn, ln, spec, lic, ph);
+                    newDoc.Schedule = schedule;
+                    manager.Add(newDoc);
                 }
-
-                Console.Write("Ліцензія: "); string lic = Console.ReadLine()!;
-                Console.Write("Телефон: "); string ph = Console.ReadLine()!;
-
-                Console.Write("Година початку роботи: "); int.TryParse(Console.ReadLine()!, out int startH);
-                Console.Write("Година кінця роботи: "); int.TryParse(Console.ReadLine()!, out int endH);
-
-                Doctor newDoc = new Doctor(fn, ln, spec, lic, ph);
-                newDoc.Schedule = new WorkSchedule(startH, endH);
-                manager.Add(newDoc);
+                catch (ArgumentOutOfRangeException e)
+                {
+                    Console.WriteLine("Помилка (значення поза межами): " + e.Message);
+                }
+                catch (ArgumentException e)
+                {
+                    Console.WriteLine("Помилка: " + e.Message);
+                }
                 break;
             case "3":
                 Console.Write("Спеціальність (напр. Therapist, Cardiologist): ");
@@ -210,17 +236,29 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
         Console.WriteLine("3. Скасувати запис");
         Console.WriteLine("4. Завершити запис");
         Console.WriteLine("0. Назад");
-        Console.Write("Ваш viбір: ");
+        Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
         switch (choice)
         {
             case "1": manager.DisplayList(manager.GetUpcoming()); break;
             case "2":
                 patients.DisplayAll(); doctors.DisplayAll();
-                Console.Write("ID пацієнта: "); int.TryParse(Console.ReadLine()!, out int pid);
-                Console.Write("ID лікаря: "); int.TryParse(Console.ReadLine()!, out int did);
-                Console.Write("Дата та час: "); DateTime.TryParse(Console.ReadLine()!, out DateTime sched);
-                manager.Book(pid, did, sched);
+                try
+                {
+                    Console.Write("ID пацієнта: "); int.TryParse(Console.ReadLine()!, out int pid);
+                    Console.Write("ID лікаря: "); int.TryParse(Console.ReadLine()!, out int did);
+                    Console.Write("Дата та час: "); DateTime.TryParse(Console.ReadLine()!, out DateTime sched);
+                    Console.Write("Тривалість (хв): "); int.TryParse(Console.ReadLine()!, out int dur);
+                    manager.Book(pid, did, sched, dur);
+                }
+                catch (ArgumentOutOfRangeException e)
+                {
+                    Console.WriteLine("Помилка (значення поза межами): " + e.Message);
+                }
+                catch (ArgumentException e)
+                {
+                    Console.WriteLine("Помилка: " + e.Message);
+                }
                 break;
             case "3":
                 Console.Write("ID запису: "); int.TryParse(Console.ReadLine()!, out int cid);
