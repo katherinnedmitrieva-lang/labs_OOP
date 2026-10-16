@@ -33,7 +33,17 @@ DateTime baseDate = DateTime.Today.AddDays(1);
 clinic.Appointments.Book(p1.Id, d1.Id, baseDate.AddHours(10), 30);
 clinic.Appointments.Book(p2.Id, d2.Id, baseDate.AddHours(11), 45);
 clinic.Appointments.Book(p3.Id, d3.Id, baseDate.AddDays(1).AddHours(9), 20);
-
+// === TEMP START (видалити в Задачі 4) ===
+Diagnosis tmpD = new Diagnosis(1, 1, DateTime.Today, "I10", "Гіпертонічна хвороба", isChronic: true);
+Console.WriteLine(tmpD);
+Console.WriteLine(tmpD.GetRecordType());
+MedicalRecord tmpR = new Diagnosis(1, 1, DateTime.Today, "J06.9", "Ринофарингіт");
+Console.WriteLine(tmpR.GetRecordType());   // має бути "Діагноз", а не "Медичний запис"
+try { new Diagnosis(1, 1, DateTime.Today, "", "x"); }
+catch (ArgumentException e) { Console.WriteLine("OK, виняток: " + e.Message); }
+try { new Diagnosis(0, 1, DateTime.Today, "A", "B"); }
+catch (ArgumentOutOfRangeException e) { Console.WriteLine("OK, виняток: " + e.Message); }
+// === TEMP END ===
 WorkSchedule morning = new WorkSchedule(8, 12);
 WorkSchedule copy = morning;
 copy = new WorkSchedule(9, 14);
