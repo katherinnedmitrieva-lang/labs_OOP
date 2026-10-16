@@ -34,15 +34,16 @@ clinic.Appointments.Book(p1.Id, d1.Id, baseDate.AddHours(10), 30);
 clinic.Appointments.Book(p2.Id, d2.Id, baseDate.AddHours(11), 45);
 clinic.Appointments.Book(p3.Id, d3.Id, baseDate.AddDays(1).AddHours(9), 20);
 // === TEMP START (видалити в Задачі 4) ===
-Diagnosis tmpD = new Diagnosis(1, 1, DateTime.Today, "I10", "Гіпертонічна хвороба", isChronic: true);
-Console.WriteLine(tmpD);
-Console.WriteLine(tmpD.GetRecordType());
-MedicalRecord tmpR = new Diagnosis(1, 1, DateTime.Today, "J06.9", "Ринофарингіт");
-Console.WriteLine(tmpR.GetRecordType());   // має бути "Діагноз", а не "Медичний запис"
-try { new Diagnosis(1, 1, DateTime.Today, "", "x"); }
-catch (ArgumentException e) { Console.WriteLine("OK, виняток: " + e.Message); }
-try { new Diagnosis(0, 1, DateTime.Today, "A", "B"); }
-catch (ArgumentOutOfRangeException e) { Console.WriteLine("OK, виняток: " + e.Message); }
+MedicalRecordManager tmpM = new MedicalRecordManager();
+tmpM.Add(new Diagnosis(1, 1, DateTime.Today.AddDays(-30), "I10", "Гіпертонічна хвороба", true));
+tmpM.Add(new LabResult(1, 1, DateTime.Today, "Холестерин", 6.2, "ммоль/л", "< 5.2", false));
+tmpM.Add(new Prescription(1, 1, DateTime.Today.AddDays(-5), "Лізиноприл", "10 мг", 30, "вранці"));
+tmpM.Add(new Prescription(2, 2, DateTime.Today.AddDays(-40), "Ібупрофен", "200 мг", 10));
+tmpM.DisplayAll();
+Console.WriteLine(tmpM[2]!.IsActive());   // True
+Console.WriteLine(tmpM[3]!.IsActive());   // False
+try { new Prescription(1, 1, DateTime.Today, "Аспірин", "500 мг", 0); }
+catch (ArgumentOutOfRangeException e) { Console.WriteLine("OK: " + e.Message); }
 // === TEMP END ===
 WorkSchedule morning = new WorkSchedule(8, 12);
 WorkSchedule copy = morning;
