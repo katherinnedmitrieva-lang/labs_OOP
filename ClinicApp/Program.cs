@@ -44,6 +44,11 @@ Console.WriteLine(tmpM[2]!.IsActive());   // True
 Console.WriteLine(tmpM[3]!.IsActive());   // False
 try { new Prescription(1, 1, DateTime.Today, "Аспірин", "500 мг", 0); }
 catch (ArgumentOutOfRangeException e) { Console.WriteLine("OK: " + e.Message); }
+tmpM.DisplayPatientSummary(1);
+tmpM.DisplayPatientSummary(2);   // немає хронічних і активних: порожніх розділів бути не повинно
+tmpM.DisplayPatientSummary(99);  // коротке повідомлення
+try { Diagnosis bad = (Diagnosis)tmpM[2]!; }          // [2] це рецепт
+catch (InvalidCastException e) { Console.WriteLine("InvalidCastException: " + e.Message); }
 // === TEMP END ===
 WorkSchedule morning = new WorkSchedule(8, 12);
 WorkSchedule copy = morning;
