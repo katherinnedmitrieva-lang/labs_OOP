@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Threading;
 using ClinicApp;
 using ClinicApp.Enums;
+using ClinicApp.Interfaces;
 using ClinicApp.Managers;
 using ClinicApp.Models;
 using ClinicApp.Utils;
@@ -37,41 +38,19 @@ DateTime baseDate = DateTime.Today.AddDays(1);
 clinic.Appointments.Book(p1.Id, d1.Id, baseDate.AddHours(10), 30);
 clinic.Appointments.Book(p2.Id, d2.Id, baseDate.AddHours(11), 45);
 clinic.Appointments.Book(p3.Id, d3.Id, baseDate.AddDays(1).AddHours(9), 20);
+
 // ===== Медичні записи (Лаба 06) =====
 DateTime today = DateTime.Today;
 
-// Пацієнт #1: два діагнози (хронічний + гострий), два аналізи, активний рецепт
 clinic.MedicalRecords.Add(new Diagnosis(p1.Id, d1.Id, today.AddDays(-30), "I10", "Гіпертонічна хвороба", true));
 clinic.MedicalRecords.Add(new Diagnosis(p1.Id, d1.Id, today.AddDays(-5), "J06.9", "Гострий ринофарингіт"));
 clinic.MedicalRecords.Add(new LabResult(p1.Id, d2.Id, today.AddDays(-10), "Гемоглобін", 145, "г/л", "120–160", true));
 clinic.MedicalRecords.Add(new LabResult(p1.Id, d2.Id, today.AddDays(-10), "Холестерин", 6.2, "ммоль/л", "< 5.2", false));
 clinic.MedicalRecords.Add(new Prescription(p1.Id, d1.Id, today.AddDays(-5), "Лізиноприл", "10 мг", 30, "1 раз на добу вранці"));
 
-// Пацієнт #2: завершений рецепт (40 днів тому, курс 10 днів, IsActive() == false) + діагноз
 clinic.MedicalRecords.Add(new Prescription(p2.Id, d2.Id, today.AddDays(-40), "Ібупрофен", "200 мг", 10, "після їди"));
 clinic.MedicalRecords.Add(new Diagnosis(p2.Id, d2.Id, today.AddDays(-3), "G43.9", "Мігрень"));
-
-// Пацієнт #3: аналіз, інший лікар
 clinic.MedicalRecords.Add(new LabResult(p3.Id, d3.Id, today.AddDays(-2), "Лейкоцити", 7.5, "10^9/л", "4.0–9.0", true));
-
-WorkSchedule morning = new WorkSchedule(8, 12);
-WorkSchedule copy = morning;
-copy = new WorkSchedule(9, 14);
-
-string testAge = ClinicFormatter.FormatAge(21);
-string testBlood = ClinicFormatter.FormatBloodType(BloodType.APositive);
-
-Doctor? testIndexerDoc = clinic.Doctors[0];
-Patient? testIndexerPat = clinic.Patients[0];
-
-string? checkNullConditional = clinic.Patients.FindById(99)?.FullName;
-string checkNullCoalescing = clinic.Patients.FindById(99)?.FullName ?? "";
-
-clinic.Patients.TryFindById(1, out Patient? foundPatient);
-
-Doctor[] searchByEnum = clinic.Doctors.FindBySpeciality(Speciality.Cardiologist);
-Doctor[] searchByString = clinic.Doctors.FindBySpeciality("кардіо");
-Appointment[] searchByTripleIntDate = clinic.Appointments.GetByDate(2026, 5, 10);
 
 RunMainMenu(clinic);
 
@@ -81,14 +60,15 @@ void RunMainMenu(Clinic activeClinic)
     while (running)
     {
         Console.WriteLine("\nГОЛОВНЕ МЕНЮ");
-        Console.WriteLine("1. Пацієнти");
-        Console.WriteLine("2. Лікарі");
-        Console.WriteLine("3. Записи");
-        Console.WriteLine("4. Медична картка");
-        Console.WriteLine("5. Звіт клініки");
-        Console.WriteLine("6. Тест GrowablePatientManager");
-        Console.WriteLine("7. Розклад на дату");
-        Console.WriteLine("0. Вихід");
+        Console.WriteLine("1 — Пацієнти");
+        Console.WriteLine("2 — Лікарі");
+        Console.WriteLine("3 — Записи");
+        Console.WriteLine("4 — Медична картка");
+        Console.WriteLine("5 — Рахунки");
+        Console.WriteLine("6 — Звіт клініки");
+        Console.WriteLine("7 — Тест GrowablePatientManager");
+        Console.WriteLine("8 — Розклад на дату");
+        Console.WriteLine("0 — Вихід");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
 
@@ -98,14 +78,41 @@ void RunMainMenu(Clinic activeClinic)
             case "2": RunDoctorsMenu(activeClinic.Doctors); break;
             case "3": RunAppointmentsMenu(activeClinic.Appointments, activeClinic.Patients, activeClinic.Doctors); break;
             case "4": RunMedicalRecordsMenu(activeClinic); break;
-            case "5": activeClinic.GenerateReport(); break;
-            case "6": RunGrowableDemo(); break;
-            case "7":
+            case "5": RunBillingMenu(activeClinic.Billing); break;
+            case "6": activeClinic.GenerateReport(); break;
+            case "7": RunGrowableDemo(); break;
+            case "8":
                 Console.Write("Дата (дд.мм.рррр): ");
                 if (DateTime.TryParse(Console.ReadLine()!, out DateTime date))
                     activeClinic.DisplaySchedule(date);
                 break;
             case "0": running = false; break;
+        }
+    }
+}
+
+void RunBillingMenu(BillingManager billingManager)
+{
+    bool inMenu = true;
+    while (inMenu)
+    {
+        Console.WriteLine("\nРахунки:");
+        Console.WriteLine("1. Показати неоплачені рахунки");
+        Console.WriteLine("2. Показати загальний борг");
+        Console.WriteLine("0. Назад");
+        Console.Write("Ваш вибір: ");
+        string choice = Console.ReadLine()!;
+        switch (choice)
+        {
+            case "1":
+                var unpaid = billingManager.GetUnpaidPayables();
+                if (unpaid.Length == 0) Console.WriteLine("Неоплачених рахунків немає.");
+                else foreach (var p in unpaid) Console.WriteLine(p);
+                break;
+            case "2":
+                Console.WriteLine($"Загальний борг: {billingManager.GetTotalDebt()} грн");
+                break;
+            case "0": inMenu = false; break;
         }
     }
 }
@@ -179,7 +186,8 @@ void RunDoctorsMenu(DoctorManager manager)
         Console.WriteLine("2. Додати лікаря");
         Console.WriteLine("3. Знайти за спеціальністю");
         Console.WriteLine("4. Видалити за ID");
-        Console.WriteLine("5. Статистика");
+        Console.WriteLine("5. Вільні години лікаря");
+        Console.WriteLine("6. Статистика");
         Console.WriteLine("0. Назад");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
@@ -205,7 +213,6 @@ void RunDoctorsMenu(DoctorManager manager)
                     Console.Write("Година початку роботи: "); int.TryParse(Console.ReadLine()!, out int startH);
                     Console.Write("Година кінця роботи: "); int.TryParse(Console.ReadLine()!, out int endH);
 
-                    // розклад створюємо ДО лікаря: якщо години некоректні — Id лікаря не витрачається
                     WorkSchedule schedule = new WorkSchedule(startH, endH);
                     Doctor newDoc = new Doctor(fn, ln, spec, lic, ph);
                     newDoc.Schedule = schedule;
@@ -241,7 +248,44 @@ void RunDoctorsMenu(DoctorManager manager)
                 Console.Write("ID: "); int.TryParse(Console.ReadLine()!, out int rid);
                 Console.WriteLine(manager.Remove(rid) ? "Видалено." : "Не знайдено.");
                 break;
-            case "5": manager.DisplayStats(); break;
+            case "5": // Вимоги завд. 4: використання інтерфейсу ISchedulable
+                manager.DisplayAll();
+                Console.Write("Введіть ID лікаря: ");
+                if (int.TryParse(Console.ReadLine()!, out int docId))
+                {
+                    Doctor? doc = manager.FindById(docId);
+                    if (doc != null)
+                    {
+                        ISchedulable schedulableDoc = doc; // Використання змінної інтерфейсного типу
+                        Console.Write("Дата (дд.мм.рррр): ");
+                        if (DateTime.TryParse(Console.ReadLine()!, out DateTime slotDate))
+                        {
+                            Console.Write("Кількість слотів: ");
+                            if (int.TryParse(Console.ReadLine()!, out int count))
+                            {
+                                try
+                                {
+                                    DateTime[] slots = schedulableDoc.GetAvailableSlots(slotDate, count);
+                                    Console.WriteLine("Доступні слоти:");
+                                    foreach (var slot in slots)
+                                    {
+                                        Console.WriteLine(slot.ToString("dd.MM.yyyy HH:mm"));
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine("Помилка: " + ex.Message);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Лікаря не знайдено.");
+                    }
+                }
+                break;
+            case "6": manager.DisplayStats(); break;
             case "0": inMenu = false; break;
         }
     }
@@ -257,6 +301,7 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
         Console.WriteLine("2. Новий запис");
         Console.WriteLine("3. Скасувати запис");
         Console.WriteLine("4. Завершити запис");
+        Console.WriteLine("8. Скасувати всі записи пацієнта");
         Console.WriteLine("0. Назад");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
@@ -290,6 +335,25 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
                 Console.Write("ID запису: "); int.TryParse(Console.ReadLine()!, out int fid);
                 manager.Complete(fid);
                 break;
+            case "8": // Вимоги завд. 4: масове скасування через AppointmentManager.CancelAll
+                patients.DisplayAll();
+                Console.Write("Введіть ID пацієнта, записи якого треба скасувати: ");
+                if (int.TryParse(Console.ReadLine()!, out int patientId))
+                {
+                    Console.Write("Причина скасування: ");
+                    string reason = Console.ReadLine() ?? "";
+
+                    var allAppointments = manager.GetAll();
+                    // Захист від null-елементів у масиві за допомогою Where(a => a != null)
+                    var patientItems = allAppointments
+                        .Where(a => a != null && a.PatientId == patientId)
+                        .Cast<ICancellable>()
+                        .ToArray();
+
+                    int cancelledCount = AppointmentManager.CancelAll(patientItems, reason);
+                    Console.WriteLine($"Успішно скасовано записів: {cancelledCount}");
+                }
+                break;
             case "0": inMenu = false; break;
         }
     }
@@ -306,6 +370,7 @@ void RunGrowableDemo()
         Console.WriteLine($"  Додано [{testPatient.Id}]. Розмір: {growable.Count} / {growable.Capacity}");
     }
 }
+
 void RunMedicalRecordsMenu(Clinic activeClinic)
 {
     MedicalRecordManager manager = activeClinic.MedicalRecords;
@@ -334,8 +399,6 @@ void RunMedicalRecordsMenu(Clinic activeClinic)
             case "2":
                 {
                     if (!TryReadExistingPatientId(activeClinic, out int patientId)) break;
-                    // Поліморфізм: масив MedicalRecord[] містить різні типи,
-                    // а виклики GetRecordType()/GetSummary() дають правильний рядок для кожного
                     MedicalRecord[] records = manager.GetByPatient(patientId);
                     if (records.Length == 0)
                     {
@@ -438,7 +501,6 @@ bool TryReadInt(string prompt, out int value)
     return false;
 }
 
-// NumberStyles.Float не дозволяє роздільник розрядів, тож "6,2" буде відхилено
 bool TryReadDouble(string prompt, out double value)
 {
     Console.Write(prompt);
