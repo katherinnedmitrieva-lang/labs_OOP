@@ -133,4 +133,8 @@ public class AppointmentManager
             Console.WriteLine(app);
         }
     }
+    public Appointment[] GetAll()
+    {
+        return (Appointment[])_appointments.Clone();
+    }
 }
