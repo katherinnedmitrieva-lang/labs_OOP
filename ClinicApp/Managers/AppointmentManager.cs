@@ -1,5 +1,6 @@
-﻿using System;
+﻿using ClinicApp.Interfaces;
 using ClinicApp.Models;
+using System;
 
 namespace ClinicApp.Managers;
 
@@ -136,5 +137,17 @@ public class AppointmentManager
     public Appointment[] GetAll()
     {
         return (Appointment[])_appointments.Clone();
+    }
+    public static int CancelAll(ICancellable[] items, string reason = "")
+    {
+        int count = 0;
+        foreach (var item in items)
+        {
+            if (!item.IsCancelled && item.Cancel(reason))
+            {
+                count++;
+            }
+        }
+        return count;
     }
 }
