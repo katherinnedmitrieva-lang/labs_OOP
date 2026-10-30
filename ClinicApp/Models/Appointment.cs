@@ -11,7 +11,6 @@ namespace ClinicApp.Models
 
         private int _durationMinutes;
         private bool _isPaid;
-        private bool _isCancelled;
         private string _cancellationReason = "";
 
         public bool IsCancelled => Status == AppointmentStatus.Cancelled;
@@ -37,9 +36,29 @@ namespace ClinicApp.Models
         public DateTime EndsAt => ScheduledAt.AddMinutes(DurationMinutes);
         public bool IsUpcoming => ScheduledAt > DateTime.Now && Status == AppointmentStatus.Scheduled;
 
-        // Реалізація IPayable (10 грн за хвилину тривалості)
-        public decimal Cost => (decimal)DurationMinutes * 10m;
+        // Реалізація IPayable. Cost не має власної формули — він бере значення з віртуального
+        // GetCost(), тому для будь-якого підкласу (терміновий, консультація...) повертає його ціну.
+        public decimal Cost => GetCost();
         public bool IsPaid => _isPaid;
+
+        // virtual — дозвіл підкласам змінити поведінку методу через override.
+        // Базова ціна: 10 грн за хвилину тривалості.
+        public virtual decimal GetCost()
+        {
+            return (decimal)DurationMinutes * 10m;
+        }
+
+        // virtual — підкласи повертають власний опис типу прийому.
+        public virtual string GetDescription()
+        {
+            return "Прийом";
+        }
+
+        // Навмисно НЕ virtual: підклас може лише приховати його через new (див. Задачу 3).
+        public int GetPriority()
+        {
+            return 3;
+        }
 
         public void MarkPaid()
         {
@@ -65,7 +84,7 @@ namespace ClinicApp.Models
             if (Status != AppointmentStatus.Scheduled) return false;
             Status = AppointmentStatus.Cancelled;
             _cancellationReason = reason ?? "";
-            if (reason.Length > 0) Notes = reason;
+            if (_cancellationReason.Length > 0) Notes = _cancellationReason;
             return true;
         }
 
@@ -78,8 +97,10 @@ namespace ClinicApp.Models
 
         public override string ToString()
         {
-            string line = $"[{Id}] Пацієнт #{PatientId} → Лікар #{DoctorId} | {ScheduledAt:dd.MM.yyyy HH:mm}–{EndsAt:HH:mm} | {Status}";
+            // GetDescription() і GetCost() — віртуальні, тому тут спрацьовує реалізація реального типу об'єкта.
+            string line = $"[{Id}] {GetDescription()} | Пацієнт #{PatientId} → Лікар #{DoctorId} | {ScheduledAt:dd.MM.yyyy HH:mm}–{EndsAt:HH:mm} | {Status}";
             if (Notes.Length > 0) line += $" | {Notes}";
+            line += $" | {GetCost():F2} грн";
             return line;
         }
     }
