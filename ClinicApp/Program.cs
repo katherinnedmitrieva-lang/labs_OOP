@@ -38,6 +38,8 @@ DateTime baseDate = DateTime.Today.AddDays(1);
 clinic.Appointments.Book(p1.Id, d1.Id, baseDate.AddHours(10), 30);
 clinic.Appointments.Book(p2.Id, d2.Id, baseDate.AddHours(11), 45);
 clinic.Appointments.Book(p3.Id, d3.Id, baseDate.AddDays(1).AddHours(9), 20);
+clinic.Appointments.BookUrgent(p2.Id, d2.Id, baseDate.AddHours(14), "сильний головний біль");
+clinic.Appointments.BookSpecialist(p1.Id, d1.Id, baseDate.AddHours(12), "кардіологія", 60);
 
 // ===== Медичні записи (Лаба 06) =====
 DateTime today = DateTime.Today;
@@ -51,6 +53,35 @@ clinic.MedicalRecords.Add(new Prescription(p1.Id, d1.Id, today.AddDays(-5), "Л�
 clinic.MedicalRecords.Add(new Prescription(p2.Id, d2.Id, today.AddDays(-40), "Ібупрофен", "200 мг", 10, "після їди"));
 clinic.MedicalRecords.Add(new Diagnosis(p2.Id, d2.Id, today.AddDays(-3), "G43.9", "Мігрень"));
 clinic.MedicalRecords.Add(new LabResult(p3.Id, d3.Id, today.AddDays(-2), "Лейкоцити", 7.5, "10^9/л", "4.0–9.0", true));
+
+// ===== Демонстрація: override проти new (Лаба 08) =====
+// Один об'єкт UrgentAppointment, на який посилаються ДВІ змінні різних типів.
+UrgentAppointment urgentDemo = new UrgentAppointment(p1.Id, d1.Id, baseDate.AddHours(16), "тест");
+Appointment viaBase = urgentDemo;   // та сама адреса в пам'яті, але змінна має тип Appointment
+
+Console.WriteLine("\n== new vs override ==");
+Console.WriteLine($"Через Appointment:       {viaBase.GetDescription()} | пріоритет {viaBase.GetPriority()}");
+Console.WriteLine($"Через UrgentAppointment: {urgentDemo.GetDescription()} | пріоритет {urgentDemo.GetPriority()}");
+
+// Відповіді на запитання:
+//
+// 1) Чому GetDescription() через змінну типу Appointment дає опис термінового прийому?
+//    Бо GetDescription() у Appointment оголошено як virtual, а в UrgentAppointment він
+//    перевизначений через override. Для virtual/override реалізацію обирає CLR під час
+//    виконання програми за РЕАЛЬНИМ типом об'єкта (runtime dispatch / пізнє зв'язування).
+//    Об'єкт у пам'яті — UrgentAppointment, тому виконується його версія, хоч змінна й типу Appointment.
+//
+// 2) Чому GetPriority() через ту саму змінну повертає 3, хоча об'єкт — UrgentAppointment?
+//    Бо в Appointment метод GetPriority() НЕ virtual, а в UrgentAppointment він лише ПРИХОВУЄ
+//    батьківський (модифікатор new) і нічого не перевизначає. Виклик невіртуального методу
+//    (зокрема прихованого через new) компілятор прив'язує ще під час компіляції — за типом
+//    ЗМІННОЇ. Змінна типу Appointment -> викликається Appointment.GetPriority() -> 3.
+//    Змінна типу UrgentAppointment -> викликається UrgentAppointment.GetPriority() -> 1.
+//
+// 3) Що треба змінити в Appointment і UrgentAppointment, щоб GetPriority() теж працював поліморфно?
+//    В Appointment: позначити метод модифікатором virtual -> public virtual int GetPriority().
+//    В UrgentAppointment: замінити new на override -> public override int GetPriority().
+//    Тоді виклик через змінну типу Appointment теж поверне 1 (за типом об'єкта).
 
 RunMainMenu(clinic);
 

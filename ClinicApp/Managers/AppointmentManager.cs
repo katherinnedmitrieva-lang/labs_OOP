@@ -31,7 +31,27 @@ public class AppointmentManager
         _doctorManager = doctorManager;
     }
 
+    // Звичайний прийом. Три методи Book* відрізняються лише тим, ЯКИЙ об'єкт створюється,
+    // а спільна частина (перевірка ліміту й додавання в масив) винесена в AddAppointment.
     public bool Book(int patientId, int doctorId, DateTime scheduledAt, int durationMinutes = 30)
+    {
+        return AddAppointment(new RegularAppointment(patientId, doctorId, scheduledAt, durationMinutes));
+    }
+
+    // Терміновий прийом
+    public bool BookUrgent(int patientId, int doctorId, DateTime scheduledAt, string urgencyNote = "", int durationMinutes = 30)
+    {
+        return AddAppointment(new UrgentAppointment(patientId, doctorId, scheduledAt, urgencyNote, durationMinutes));
+    }
+
+    // Консультація спеціаліста
+    public bool BookSpecialist(int patientId, int doctorId, DateTime scheduledAt, string topic = "", int durationMinutes = 45)
+    {
+        return AddAppointment(new SpecialistAppointment(patientId, doctorId, scheduledAt, topic, durationMinutes));
+    }
+
+    // Приймає вже створений запис будь-якого типу (параметр має базовий тип Appointment).
+    private bool AddAppointment(Appointment app)
     {
         if (_count >= MaxAppointments)
         {
@@ -39,10 +59,9 @@ public class AppointmentManager
             return false;
         }
 
-        Appointment app = new Appointment(patientId, doctorId, scheduledAt, durationMinutes);
         _appointments[_count] = app;
         _count++;
-        Console.WriteLine($"Запис [{app.Id}] успішно створено на {scheduledAt:dd.MM.yyyy HH:mm}.");
+        Console.WriteLine($"Запис [{app.Id}] успішно створено на {app.ScheduledAt:dd.MM.yyyy HH:mm}.");
         return true;
     }
 
