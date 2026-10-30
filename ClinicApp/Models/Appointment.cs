@@ -12,6 +12,7 @@ namespace ClinicApp.Models
         private int _durationMinutes;
         private bool _isPaid;
         private string _cancellationReason = "";
+        private decimal _discountMultiplier = 1m;
 
         public bool IsCancelled => Status == AppointmentStatus.Cancelled;
         public string CancellationReason => _cancellationReason;
@@ -41,11 +42,30 @@ namespace ClinicApp.Models
         public decimal Cost => GetCost();
         public bool IsPaid => _isPaid;
 
+        // ВАРІАНТ А (VIP-знижка): обрано множник знижки в базовому класі Appointment, а не нові підкласи
+        // (VipUrgentAppointment тощо). Причини:
+        //  - GetDescription() у UrgentAppointment — sealed override, а SpecialistAppointment — sealed class,
+        //    тож VIP-підкласи від них компілятор не дозволяє (помилки CS0239 і CS0509);
+        //  - VIP-підкласи множать кількість класів: 3 типи -> 6 класів, з дитячим і пенсійним тарифами -> 12 і більше;
+        //  - підкласи не змінюються: їхній base.GetCost() уже містить знижку (відкритий для розширення,
+        //    закритий для змін — принцип Open/Closed).
+        // 1 = без знижки; 0.8 = знижка 20%. Допустимі значення: більше 0 і не більше 1.
+        public decimal DiscountMultiplier
+        {
+            get => _discountMultiplier;
+            set
+            {
+                if (value <= 0m || value > 1m)
+                    throw new ArgumentOutOfRangeException(nameof(DiscountMultiplier), "Множник знижки має бути більшим за 0 і не більшим за 1.");
+                _discountMultiplier = value;
+            }
+        }
+
         // virtual — дозвіл підкласам змінити поведінку методу через override.
-        // Базова ціна: 10 грн за хвилину тривалості.
+        // Базова ціна: 10 грн за хвилину тривалості з урахуванням знижкового множника.
         public virtual decimal GetCost()
         {
-            return (decimal)DurationMinutes * 10m;
+            return (decimal)DurationMinutes * 10m * DiscountMultiplier;
         }
 
         // virtual — підкласи повертають власний опис типу прийому.
