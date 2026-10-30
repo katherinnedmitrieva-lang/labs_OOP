@@ -11,8 +11,8 @@ namespace ClinicApp.Models
 
         private int _durationMinutes;
         private bool _isPaid;
-        private bool _isCancelled;
         private string _cancellationReason = "";
+        private decimal _discountMultiplier = 1m;
 
         public bool IsCancelled => Status == AppointmentStatus.Cancelled;
         public string CancellationReason => _cancellationReason;
@@ -37,9 +37,48 @@ namespace ClinicApp.Models
         public DateTime EndsAt => ScheduledAt.AddMinutes(DurationMinutes);
         public bool IsUpcoming => ScheduledAt > DateTime.Now && Status == AppointmentStatus.Scheduled;
 
-        // Реалізація IPayable (10 грн за хвилину тривалості)
-        public decimal Cost => (decimal)DurationMinutes * 10m;
+        // Реалізація IPayable. Cost не має власної формули — він бере значення з віртуального
+        // GetCost(), тому для будь-якого підкласу (терміновий, консультація...) повертає його ціну.
+        public decimal Cost => GetCost();
         public bool IsPaid => _isPaid;
+
+        // ВАРІАНТ А (VIP-знижка): обрано множник знижки в базовому класі Appointment, а не нові підкласи
+        // (VipUrgentAppointment тощо). Причини:
+        //  - GetDescription() у UrgentAppointment — sealed override, а SpecialistAppointment — sealed class,
+        //    тож VIP-підкласи від них компілятор не дозволяє (помилки CS0239 і CS0509);
+        //  - VIP-підкласи множать кількість класів: 3 типи -> 6 класів, з дитячим і пенсійним тарифами -> 12 і більше;
+        //  - підкласи не змінюються: їхній base.GetCost() уже містить знижку (відкритий для розширення,
+        //    закритий для змін — принцип Open/Closed).
+        // 1 = без знижки; 0.8 = знижка 20%. Допустимі значення: більше 0 і не більше 1.
+        public decimal DiscountMultiplier
+        {
+            get => _discountMultiplier;
+            set
+            {
+                if (value <= 0m || value > 1m)
+                    throw new ArgumentOutOfRangeException(nameof(DiscountMultiplier), "Множник знижки має бути більшим за 0 і не більшим за 1.");
+                _discountMultiplier = value;
+            }
+        }
+
+        // virtual — дозвіл підкласам змінити поведінку методу через override.
+        // Базова ціна: 10 грн за хвилину тривалості з урахуванням знижкового множника.
+        public virtual decimal GetCost()
+        {
+            return (decimal)DurationMinutes * 10m * DiscountMultiplier;
+        }
+
+        // virtual — підкласи повертають власний опис типу прийому.
+        public virtual string GetDescription()
+        {
+            return "Прийом";
+        }
+
+        // Навмисно НЕ virtual: підклас може лише приховати його через new (див. Задачу 3).
+        public int GetPriority()
+        {
+            return 3;
+        }
 
         public void MarkPaid()
         {
@@ -65,7 +104,7 @@ namespace ClinicApp.Models
             if (Status != AppointmentStatus.Scheduled) return false;
             Status = AppointmentStatus.Cancelled;
             _cancellationReason = reason ?? "";
-            if (reason.Length > 0) Notes = reason;
+            if (_cancellationReason.Length > 0) Notes = _cancellationReason;
             return true;
         }
 
@@ -78,8 +117,10 @@ namespace ClinicApp.Models
 
         public override string ToString()
         {
-            string line = $"[{Id}] Пацієнт #{PatientId} → Лікар #{DoctorId} | {ScheduledAt:dd.MM.yyyy HH:mm}–{EndsAt:HH:mm} | {Status}";
+            // GetDescription() і GetCost() — віртуальні, тому тут спрацьовує реалізація реального типу об'єкта.
+            string line = $"[{Id}] {GetDescription()} | Пацієнт #{PatientId} → Лікар #{DoctorId} | {ScheduledAt:dd.MM.yyyy HH:mm}–{EndsAt:HH:mm} | {Status}";
             if (Notes.Length > 0) line += $" | {Notes}";
+            line += $" | {GetCost():F2} грн";
             return line;
         }
     }
