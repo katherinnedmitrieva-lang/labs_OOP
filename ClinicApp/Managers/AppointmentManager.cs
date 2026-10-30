@@ -150,8 +150,91 @@ public class AppointmentManager
         }
         foreach (Appointment app in list)
         {
-            Console.WriteLine(app);
+            DisplayAppointment(app);
         }
+    }
+
+    // Один рядок запису: опис, імена пацієнта й лікаря (через менеджери), час, статус і вартість.
+    // Жодного if/switch за типом запису: опис і ціну дають віртуальні методи GetDescription() і GetCost(),
+    // кожен підклас повертає своє значення (поліморфізм).
+    public void DisplayAppointment(Appointment app)
+    {
+        Patient? patient = _patientManager.FindById(app.PatientId);
+        Doctor? doctor = _doctorManager.FindById(app.DoctorId);
+
+        // Якщо пацієнта чи лікаря вже видалено — показуємо хоча б номер
+        string patientName = patient != null ? patient.FullName : $"Пацієнт #{app.PatientId}";
+        string doctorName = doctor != null ? doctor.FullName : $"Лікар #{app.DoctorId}";
+
+        string line = $"[{app.Id}] {app.GetDescription()} | {patientName} → {doctorName} | {app.ScheduledAt:dd.MM.yyyy HH:mm}–{app.EndsAt:HH:mm} | {app.Status}";
+        if (app.Notes.Length > 0) line += $" | {app.Notes}";
+        line += $" | {app.GetCost():F2} грн";
+        Console.WriteLine(line);
+    }
+
+    // Відбір за типом — двопрохідний патерн: 1-й прохід рахує, 2-й заповнює масив точного розміру.
+    // is перевіряє тип ОБ'ЄКТА (а не змінної), тому розрізняє підкласи в масиві Appointment[].
+    public Appointment[] GetUrgent()
+    {
+        int matchCount = 0;
+        for (int i = 0; i < _count; i++)
+        {
+            if (_appointments[i] is UrgentAppointment) matchCount++;
+        }
+
+        Appointment[] result = new Appointment[matchCount];
+        int index = 0;
+        for (int i = 0; i < _count; i++)
+        {
+            if (_appointments[i] is UrgentAppointment)
+            {
+                result[index] = _appointments[i];
+                index++;
+            }
+        }
+        return result;
+    }
+
+    public Appointment[] GetSpecialist()
+    {
+        int matchCount = 0;
+        for (int i = 0; i < _count; i++)
+        {
+            if (_appointments[i] is SpecialistAppointment) matchCount++;
+        }
+
+        Appointment[] result = new Appointment[matchCount];
+        int index = 0;
+        for (int i = 0; i < _count; i++)
+        {
+            if (_appointments[i] is SpecialistAppointment)
+            {
+                result[index] = _appointments[i];
+                index++;
+            }
+        }
+        return result;
+    }
+
+    public Appointment[] GetRegular()
+    {
+        int matchCount = 0;
+        for (int i = 0; i < _count; i++)
+        {
+            if (_appointments[i] is RegularAppointment) matchCount++;
+        }
+
+        Appointment[] result = new Appointment[matchCount];
+        int index = 0;
+        for (int i = 0; i < _count; i++)
+        {
+            if (_appointments[i] is RegularAppointment)
+            {
+                result[index] = _appointments[i];
+                index++;
+            }
+        }
+        return result;
     }
     public Appointment[] GetAll()
     {

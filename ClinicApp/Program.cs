@@ -333,6 +333,7 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
         Console.WriteLine("3. Скасувати запис");
         Console.WriteLine("4. Завершити запис");
         Console.WriteLine("8. Скасувати всі записи пацієнта");
+        Console.WriteLine("9. За типом прийому");
         Console.WriteLine("0. Назад");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
@@ -383,6 +384,20 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
 
                     int cancelledCount = AppointmentManager.CancelAll(patientItems, reason);
                     Console.WriteLine($"Успішно скасовано записів: {cancelledCount}");
+                }
+                break;
+            case "9": // Перегляд записів за типом (GetUrgent / GetSpecialist / GetRegular)
+                Console.WriteLine("1. Термінові");
+                Console.WriteLine("2. Консультації спеціаліста");
+                Console.WriteLine("3. Звичайні");
+                Console.Write("Оберіть: ");
+                string typeChoice = Console.ReadLine() ?? "";
+                switch (typeChoice)
+                {
+                    case "1": manager.DisplayList(manager.GetUrgent()); break;
+                    case "2": manager.DisplayList(manager.GetSpecialist()); break;
+                    case "3": manager.DisplayList(manager.GetRegular()); break;
+                    default: Console.WriteLine("Невідомий варіант."); break;
                 }
                 break;
             case "0": inMenu = false; break;
