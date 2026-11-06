@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using ClinicApp.Enums;
 using ClinicApp.Models;
 
@@ -7,36 +8,33 @@ namespace ClinicApp.Managers;
 
 public class PatientManager
 {
-    private const int MaxPatients = 100;
-    private Patient[] _patients = new Patient[MaxPatients];
-    private int _count = 0;
+    // Раніше тут був масив фіксованого розміру з ручним лічильником.
+    // Тепер List<Patient> — динамічний масив, який сам знає свій розмір (Count)
+    // і сам збільшується при додаванні. Тому штучний ліміт на кількість пацієнтів більше не потрібен.
+    private List<Patient> _patients = new List<Patient>();
 
-    public int Count => _count;
+    // Кількість елементів тепер рахує сам список.
+    public int Count => _patients.Count;
 
     public Patient? this[int index]
     {
         get
         {
-            if (index < 0 || index >= _count) return null;
+            if (index < 0 || index >= _patients.Count) return null;
             return _patients[index];
         }
     }
 
     public void Add(Patient patient)
     {
-        if (_count >= MaxPatients)
-        {
-            Console.WriteLine($"Не вдалося додати пацієнта: досягнуто ліміту ({MaxPatients}).");
-            return;
-        }
-        _patients[_count] = patient;
-        _count++;
+        // Без перевірки ліміту: List<T> сам розширюється.
+        _patients.Add(patient);
         Console.WriteLine($"Пацієнта [{patient.Id}] {patient.FullName} додано.");
     }
 
     public Patient? FindById(int id)
     {
-        for (int i = 0; i < _count; i++)
+        for (int i = 0; i < _patients.Count; i++)
         {
             if (_patients[i].Id == id) return _patients[i];
         }
@@ -52,87 +50,64 @@ public class PatientManager
     public Patient[] FindByName(string name)
     {
         string search = name.ToLower();
-        int matchCount = 0;
-        for (int i = 0; i < _count; i++)
-        {
-            if (_patients[i].FullName.ToLower().Contains(search)) matchCount++;
-        }
 
-        Patient[] result = new Patient[matchCount];
-        int index = 0;
-        for (int i = 0; i < _count; i++)
+        // Двопрохідний патерн більше не потрібен: наповнюємо проміжний список
+        // (не треба наперед знати, скільки буде збігів) і в кінці перетворюємо його на масив.
+        List<Patient> result = new List<Patient>();
+        for (int i = 0; i < _patients.Count; i++)
         {
-            if (_patients[i].FullName.ToLower().Contains(search))
-            {
-                result[index] = _patients[i];
-                index++;
-            }
+            if (_patients[i].FullName.ToLower().Contains(search)) result.Add(_patients[i]);
         }
-        return result;
+        return result.ToArray();
     }
 
     public Patient[] FindByBloodType(BloodType bloodType)
     {
-        int matchCount = 0;
-        for (int i = 0; i < _count; i++)
+        List<Patient> result = new List<Patient>();
+        for (int i = 0; i < _patients.Count; i++)
         {
-            if (_patients[i].BloodType == bloodType) matchCount++;
+            if (_patients[i].BloodType == bloodType) result.Add(_patients[i]);
         }
-
-        Patient[] result = new Patient[matchCount];
-        int index = 0;
-        for (int i = 0; i < _count; i++)
-        {
-            if (_patients[i].BloodType == bloodType)
-            {
-                result[index] = _patients[i];
-                index++;
-            }
-        }
-        return result;
+        return result.ToArray();
     }
 
     public Patient[] GetAll()
     {
-        Patient[] copy = new Patient[_count];
-        Array.Copy(_patients, copy, _count);
-        return copy;
+        // ToArray() створює НОВИЙ масив-копію однією операцією (замість Array.Copy у циклі),
+        // тому зовнішній код не може зіпсувати внутрішній список.
+        return _patients.ToArray();
     }
 
     public bool Remove(int id)
     {
-        int indexToRemove = -1;
-        for (int i = 0; i < _count; i++)
+        for (int i = 0; i < _patients.Count; i++)
         {
-            if (_patients[i].Id == id) { indexToRemove = i; break; }
+            if (_patients[i].Id == id)
+            {
+                // RemoveAt сам зсуває всі наступні елементи — ручний зсув не потрібен.
+                _patients.RemoveAt(i);
+                return true;
+            }
         }
-        if (indexToRemove == -1) return false;
-
-        for (int i = indexToRemove; i < _count - 1; i++)
-        {
-            _patients[i] = _patients[i + 1];
-        }
-        _patients[_count - 1] = null!;
-        _count--;
-        return true;
+        return false;
     }
 
     public void DisplayAll()
     {
-        Console.WriteLine($"Пацієнти ({_count} / {MaxPatients}):");
-        if (_count == 0)
+        Console.WriteLine($"Пацієнти ({_patients.Count}):");
+        if (_patients.Count == 0)
         {
             Console.WriteLine("Список порожній.");
             return;
         }
-        for (int i = 0; i < _count; i++) Console.WriteLine(_patients[i]);
+        for (int i = 0; i < _patients.Count; i++) Console.WriteLine(_patients[i]);
         Console.WriteLine(new string('─', 62));
     }
 
     public void DisplayStats()
     {
         Console.WriteLine("Статистика пацієнтів:");
-        if (_count == 0)
+        if (_patients.Count == 0)
         {
             Console.WriteLine("Список порожній.");
             Console.WriteLine(new string('=', 26));
@@ -141,13 +116,13 @@ public class PatientManager
 
         int adults = 0;
         int children = 0;
-        for (int i = 0; i < _count; i++)
+        for (int i = 0; i < _patients.Count; i++)
         {
             if (_patients[i].IsAdult) adults++;
             else children++;
         }
 
-        Console.WriteLine($"Всього:    {_count}");
+        Console.WriteLine($"Всього:    {_patients.Count}");
         Console.WriteLine($"Дорослих:  {adults}");
         Console.WriteLine($"Дітей:     {children}");
         Console.WriteLine(new string('=', 26));
