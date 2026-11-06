@@ -96,9 +96,10 @@ void RunMainMenu(Clinic activeClinic)
         Console.WriteLine("3 — Записи");
         Console.WriteLine("4 — Медична картка");
         Console.WriteLine("5 — Рахунки");
-        Console.WriteLine("6 — Звіт клініки");
-        Console.WriteLine("7 — Тест GrowablePatientManager");
-        Console.WriteLine("8 — Розклад на дату");
+        Console.WriteLine("6 — Черга — очікування, прийом");
+        Console.WriteLine("7 — Звіт клініки");
+        Console.WriteLine("8 — Тест GrowablePatientManager");
+        Console.WriteLine("9 — Розклад на дату");
         Console.WriteLine("0 — Вихід");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
@@ -110,9 +111,10 @@ void RunMainMenu(Clinic activeClinic)
             case "3": RunAppointmentsMenu(activeClinic.Appointments, activeClinic.Patients, activeClinic.Doctors); break;
             case "4": RunMedicalRecordsMenu(activeClinic); break;
             case "5": RunBillingMenu(activeClinic.Billing); break;
-            case "6": activeClinic.GenerateReport(); break;
-            case "7": RunGrowableDemo(); break;
-            case "8":
+            case "6": WaitingRoomMenu(activeClinic); break;
+            case "7": activeClinic.GenerateReport(); break;
+            case "8": RunGrowableDemo(); break;
+            case "9":
                 Console.Write("Дата (дд.мм.рррр): ");
                 if (DateTime.TryParse(Console.ReadLine()!, out DateTime date))
                     activeClinic.DisplaySchedule(date);
@@ -121,7 +123,82 @@ void RunMainMenu(Clinic activeClinic)
         }
     }
 }
-
+// Меню черги очікування (Лаба 09): працює з clinic.WaitingRoom — це WaitingQueue<Patient>.
+void WaitingRoomMenu(Clinic clinic)
+{
+    bool inMenu = true;
+    while (inMenu)
+    {
+        Console.WriteLine("\nЧерга:");
+        Console.WriteLine("1. Додати пацієнта до черги");
+        Console.WriteLine("2. Прийняти першого");
+        Console.WriteLine("3. Хто перший?");
+        Console.WriteLine("4. Переглянути всю чергу");
+        Console.WriteLine("0. Назад");
+        Console.Write("Ваш вибір: ");
+        string choice = Console.ReadLine() ?? "";
+        switch (choice)
+        {
+            case "1":
+                {
+                    clinic.Patients.DisplayAll();
+                    if (!TryReadInt("ID пацієнта: ", out int patientId)) break;
+                    Patient? patient = clinic.Patients.FindById(patientId);
+                    if (patient == null)
+                    {
+                        Console.WriteLine("Пацієнта не знайдено.");
+                        break;
+                    }
+                    clinic.WaitingRoom.Enqueue(patient);
+                    Console.WriteLine($"{patient.FullName} додано до черги. Позиція в черзі: {clinic.WaitingRoom.Count}.");
+                    break;
+                }
+            case "2":
+                {
+                    // Dequeue на порожній черзі кидає InvalidOperationException —
+                    // порожня черга для користувача нормальна ситуація, тому програма не падає, а пояснює.
+                    try
+                    {
+                        Patient accepted = clinic.WaitingRoom.Dequeue();
+                        Console.WriteLine($"Прийнято: {accepted.FullName}. У черзі лишилось: {clinic.WaitingRoom.Count}");
+                    }
+                    catch (InvalidOperationException e)
+                    {
+                        Console.WriteLine("Помилка: " + e.Message);
+                    }
+                    break;
+                }
+            case "3":
+                {
+                    // Peek лише дивиться на першого, не видаляючи його з черги.
+                    try
+                    {
+                        Patient first = clinic.WaitingRoom.Peek();
+                        Console.WriteLine($"Перший у черзі: {first.FullName}");
+                    }
+                    catch (InvalidOperationException e)
+                    {
+                        Console.WriteLine("Помилка: " + e.Message);
+                    }
+                    break;
+                }
+            case "4":
+                {
+                    Patient[] queued = clinic.WaitingRoom.ToArray();
+                    if (queued.Length == 0)
+                    {
+                        Console.WriteLine("Черга порожня.");
+                        break;
+                    }
+                    Console.WriteLine($"У черзі ({queued.Length}):");
+                    for (int i = 0; i < queued.Length; i++)
+                        Console.WriteLine($"{i + 1}. {queued[i].FullName}");
+                    break;
+                }
+            case "0": inMenu = false; break;
+        }
+    }
+}
 void RunBillingMenu(BillingManager billingManager)
 {
     bool inMenu = true;
