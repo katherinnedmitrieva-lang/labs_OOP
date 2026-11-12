@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Threading;
 using ClinicApp;
+using ClinicApp.Comparators;
 using ClinicApp.Enums;
 using ClinicApp.Interfaces;
 using ClinicApp.Managers;
@@ -98,8 +99,9 @@ void RunMainMenu(Clinic activeClinic)
         Console.WriteLine("5 — Рахунки");
         Console.WriteLine("6 — Черга — очікування, прийом");
         Console.WriteLine("7 — Звіт клініки");
-        Console.WriteLine("8 — Тест GrowablePatientManager");
+        Console.WriteLine("8 — Аналітика");
         Console.WriteLine("9 — Розклад на дату");
+        Console.WriteLine("10 — Тест GrowablePatientManager");
         Console.WriteLine("0 — Вихід");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
@@ -113,12 +115,13 @@ void RunMainMenu(Clinic activeClinic)
             case "5": RunBillingMenu(activeClinic.Billing); break;
             case "6": WaitingRoomMenu(activeClinic); break;
             case "7": activeClinic.GenerateReport(); break;
-            case "8": RunGrowableDemo(); break;
+            case "8": AnalyticsMenu(activeClinic); break;
             case "9":
                 Console.Write("Дата (дд.мм.рррр): ");
                 if (DateTime.TryParse(Console.ReadLine()!, out DateTime date))
                     activeClinic.DisplaySchedule(date);
                 break;
+            case "10": RunGrowableDemo(); break;
             case "0": running = false; break;
         }
     }
@@ -199,6 +202,121 @@ void WaitingRoomMenu(Clinic clinic)
         }
     }
 }
+// Меню «Аналітика» (Лаба 10): п'ять звітів, що показують і природні, і додаткові порядки сортування.
+void AnalyticsMenu(Clinic clinic)
+{
+    bool inMenu = true;
+    while (inMenu)
+    {
+        Console.WriteLine("\nАналітика:");
+        Console.WriteLine("1. Лікарі — природний порядок (найбільше прийомів — першим)");
+        Console.WriteLine("2. Лікарі — за навантаженням (найменше прийомів — першим)");
+        Console.WriteLine("3. Лікарі — за виручкою (найбільша — першою)");
+        Console.WriteLine("4. Лікарі — за алфавітом (А → Я)");
+        Console.WriteLine("5. Пацієнти — природний порядок і за витратами");
+        Console.WriteLine("6. Показати всі звіти");
+        Console.WriteLine("0. Назад");
+        Console.Write("Ваш вибір: ");
+        string choice = Console.ReadLine() ?? "";
+
+        switch (choice)
+        {
+            case "1": ShowDoctorsNaturalReport(clinic); break;
+            case "2": ShowDoctorsByLoadReport(clinic); break;
+            case "3": ShowDoctorsByRevenueReport(clinic); break;
+            case "4": ShowDoctorsByNameReport(clinic); break;
+            case "5": ShowPatientsReport(clinic); break;
+            case "6":
+                ShowDoctorsNaturalReport(clinic);
+                ShowDoctorsByLoadReport(clinic);
+                ShowDoctorsByRevenueReport(clinic);
+                ShowDoctorsByNameReport(clinic);
+                ShowPatientsReport(clinic);
+                break;
+            case "0": inMenu = false; break;
+        }
+    }
+}
+
+// Звіт 1: ПРИРОДНИЙ порядок. Масив сортується одним викликом Array.Sort() без компаратора —
+// він сам бере DoctorStats.CompareTo (IComparable<DoctorStats>).
+void ShowDoctorsNaturalReport(Clinic clinic)
+{
+    DoctorStats[] stats = CollectDoctorStats(clinic).ToArray();
+    Array.Sort(stats);
+    PrintReport("Лікарі — природний порядок (за кількістю прийомів ↓)", stats);
+}
+
+// Звіти 2–4: ДОДАТКОВІ порядки. Окремий клас-компаратор передається в List<T>.Sort(comparer).
+void ShowDoctorsByLoadReport(Clinic clinic)
+{
+    List<DoctorStats> stats = CollectDoctorStats(clinic);
+    stats.Sort(new DoctorByLoadComparer());
+    PrintReport("Лікарі — за навантаженням (найменше прийомів першим ↑)", stats);
+}
+
+void ShowDoctorsByRevenueReport(Clinic clinic)
+{
+    List<DoctorStats> stats = CollectDoctorStats(clinic);
+    stats.Sort(new DoctorByRevenueComparer());
+    PrintReport("Лікарі — за виручкою (↓)", stats);
+}
+
+void ShowDoctorsByNameReport(Clinic clinic)
+{
+    List<DoctorStats> stats = CollectDoctorStats(clinic);
+    stats.Sort(new DoctorByNameComparer());
+    PrintReport("Лікарі — за алфавітом (А → Я)", stats);
+}
+
+// Звіт 5: пацієнти — спочатку природний порядок (за візитами), потім додатковий (за витратами).
+void ShowPatientsReport(Clinic clinic)
+{
+    PatientStats[] natural = CollectPatientStats(clinic).ToArray();
+    Array.Sort(natural);
+    PrintReport("Пацієнти — природний порядок (за кількістю візитів ↓)", natural);
+
+    List<PatientStats> bySpent = CollectPatientStats(clinic);
+    bySpent.Sort(new PatientBySpentComparer());
+    PrintReport("Пацієнти — за витратами (↓)", bySpent);
+}
+
+// Загальний вивід звіту. Порожній набір — не помилка, а нормальна ситуація (ще немає лікарів чи пацієнтів).
+void PrintReport<T>(string title, IEnumerable<T> items)
+{
+    Console.WriteLine($"\n{title}:");
+    int number = 0;
+    foreach (T item in items)
+    {
+        number++;
+        Console.WriteLine($"{number}. {item}");
+    }
+    if (number == 0) Console.WriteLine("Даних немає.");
+}
+
+// Лінивий ітератор → колекція. ComputeDoctorStats() повертає IEnumerable<T> (yield return) — його НЕ можна
+// відсортувати, бо елементи ще не обчислені. foreach «проганяє» ітератор і складає результати в List<DoctorStats>,
+// який уже можна сортувати (list.Sort / Array.Sort).
+List<DoctorStats> CollectDoctorStats(Clinic clinic)
+{
+    List<DoctorStats> result = new List<DoctorStats>();
+    foreach (DoctorStats stats in clinic.Analytics.ComputeDoctorStats())
+    {
+        result.Add(stats);
+    }
+    return result;
+}
+
+List<PatientStats> CollectPatientStats(Clinic clinic)
+{
+    List<PatientStats> result = new List<PatientStats>();
+    foreach (PatientStats stats in clinic.Analytics.ComputePatientStats())
+    {
+        result.Add(stats);
+    }
+    return result;
+}
+
 void RunBillingMenu(BillingManager billingManager)
 {
     bool inMenu = true;
