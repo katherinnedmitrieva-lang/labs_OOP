@@ -16,6 +16,9 @@ public class Clinic
     // Черга очікування пацієнтів (Лаба 09): generic WaitingQueue<T>, інстанційований типом Patient.
     public WaitingQueue<Patient> WaitingRoom { get; }
 
+    // Аналітика (Лаба 10): статистика по лікарях і пацієнтах, джерела даних — менеджери цієї ж клініки.
+    public AnalyticsManager Analytics { get; }
+
     public Clinic(string name)
     {
         Name = name;
@@ -25,6 +28,8 @@ public class Clinic
         MedicalRecords = new MedicalRecordManager();
         Billing = new BillingManager(Appointments);
         WaitingRoom = new WaitingQueue<Patient>();
+        // Створюється ПІСЛЯ Patients, Doctors і Appointments: конструктор отримує вже готові менеджери.
+        Analytics = new AnalyticsManager(Appointments, Doctors, Patients);
     }
 
     public void DisplaySchedule(DateTime date)
