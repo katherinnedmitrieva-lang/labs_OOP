@@ -19,6 +19,9 @@ public class Clinic
     // Аналітика (Лаба 10): статистика по лікарях і пацієнтах, джерела даних — менеджери цієї ж клініки.
     public AnalyticsManager Analytics { get; }
 
+    // Плани лікування (Лаба 11): зберігаються лише після перевірки ModelValidator.
+    public TreatmentPlanManager TreatmentPlans { get; }
+
     public Clinic(string name)
     {
         Name = name;
@@ -30,6 +33,7 @@ public class Clinic
         WaitingRoom = new WaitingQueue<Patient>();
         // Створюється ПІСЛЯ Patients, Doctors і Appointments: конструктор отримує вже готові менеджери.
         Analytics = new AnalyticsManager(Appointments, Doctors, Patients);
+        TreatmentPlans = new TreatmentPlanManager();
     }
 
     public void DisplaySchedule(DateTime date)

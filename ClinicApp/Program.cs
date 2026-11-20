@@ -100,8 +100,9 @@ void RunMainMenu(Clinic activeClinic)
         Console.WriteLine("6 — Черга — очікування, прийом");
         Console.WriteLine("7 — Звіт клініки");
         Console.WriteLine("8 — Аналітика");
-        Console.WriteLine("9 — Розклад на дату");
+        Console.WriteLine("9 — Плани лікування — рефлексія, атрибути");
         Console.WriteLine("10 — Тест GrowablePatientManager");
+        Console.WriteLine("11 — Розклад на дату");
         Console.WriteLine("0 — Вихід");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
@@ -116,12 +117,13 @@ void RunMainMenu(Clinic activeClinic)
             case "6": WaitingRoomMenu(activeClinic); break;
             case "7": activeClinic.GenerateReport(); break;
             case "8": AnalyticsMenu(activeClinic); break;
-            case "9":
+            case "9": TreatmentPlanMenu(activeClinic); break;
+            case "10": RunGrowableDemo(); break;
+            case "11":
                 Console.Write("Дата (дд.мм.рррр): ");
                 if (DateTime.TryParse(Console.ReadLine()!, out DateTime date))
                     activeClinic.DisplaySchedule(date);
                 break;
-            case "10": RunGrowableDemo(); break;
             case "0": running = false; break;
         }
     }
@@ -202,6 +204,110 @@ void WaitingRoomMenu(Clinic clinic)
         }
     }
 }
+// Меню «Плани лікування» (Лаба 11): показує роботу атрибутів і рефлексії.
+void TreatmentPlanMenu(Clinic clinic)
+{
+    bool inMenu = true;
+    while (inMenu)
+    {
+        Console.WriteLine("\n── Плани лікування ────────────────────");
+        Console.WriteLine("  1. Показати всі плани");
+        Console.WriteLine("  2. Додати план лікування");
+        Console.WriteLine("  3. Плани пацієнта");
+        Console.WriteLine("  4. Активувати план");
+        Console.WriteLine("  5. Завершити план");
+        Console.WriteLine("  6. Скасувати план");
+        Console.WriteLine("  7. Інформація про тип TreatmentPlan");
+        Console.WriteLine("  0. Назад");
+        Console.Write("Оберіть: ");
+        string? choice = Console.ReadLine();
+        if (choice == null) break;   // кінець введення — виходимо, а не крутимо цикл вічно
+
+        switch (choice.Trim())
+        {
+            case "1":
+                PrintTreatmentPlans(clinic.TreatmentPlans.GetAll(), "Планів лікування ще немає.");
+                break;
+            case "2":
+                {
+                    // Форма будується АВТОМАТИЧНО за атрибутами властивостей TreatmentPlan.
+                    TreatmentPlan plan = FormBuilder.Build<TreatmentPlan>();
+                    // Add сам перевіряє план валідатором: для невалідного виводить помилки й повертає false.
+                    if (clinic.TreatmentPlans.Add(plan))
+                        Console.WriteLine($"План [{plan.Id}] додано.");
+                    else
+                        Console.WriteLine("План не додано.");
+                    break;
+                }
+            case "3":
+                {
+                    if (!TryReadInt("ID пацієнта: ", out int patientId)) break;
+                    PrintTreatmentPlans(clinic.TreatmentPlans.GetByPatient(patientId), "Для цього пацієнта планів лікування немає.");
+                    break;
+                }
+            case "4":
+                {
+                    TreatmentPlan? plan = ReadTreatmentPlan(clinic);
+                    if (plan == null) break;
+                    if (plan.Activate())
+                        Console.WriteLine($"План [{plan.Id}] активовано. Статус: {plan.Status}.");
+                    else
+                        Console.WriteLine($"Перехід неможливий: активувати можна лише план зі статусом Planned (зараз — {plan.Status}).");
+                    break;
+                }
+            case "5":
+                {
+                    TreatmentPlan? plan = ReadTreatmentPlan(clinic);
+                    if (plan == null) break;
+                    if (plan.Complete())
+                        Console.WriteLine($"План [{plan.Id}] завершено. Статус: {plan.Status}.");
+                    else
+                        Console.WriteLine($"Перехід неможливий: завершити можна лише активний план (зараз — {plan.Status}).");
+                    break;
+                }
+            case "6":
+                {
+                    TreatmentPlan? plan = ReadTreatmentPlan(clinic);
+                    if (plan == null) break;
+                    if (plan.Cancel())
+                        Console.WriteLine($"План [{plan.Id}] скасовано. Статус: {plan.Status}.");
+                    else
+                        Console.WriteLine($"Перехід неможливий: завершений або вже скасований план скасувати не можна (зараз — {plan.Status}).");
+                    break;
+                }
+            case "7":
+                // typeof(...) дає Type без створення об'єкта — рефлексія працює і без екземпляра.
+                ModelValidator.PrintInfo(typeof(TreatmentPlan));
+                break;
+            case "0": inMenu = false; break;
+            default: Console.WriteLine("Невідомий пункт меню."); break;
+        }
+    }
+}
+
+// Запитує ID плану й шукає його. Повертає null (з поясненням), якщо ID некоректний або плану немає.
+TreatmentPlan? ReadTreatmentPlan(Clinic clinic)
+{
+    if (!TryReadInt("ID плану: ", out int planId)) return null;
+    TreatmentPlan? plan = clinic.TreatmentPlans.GetById(planId);
+    if (plan == null)
+        Console.WriteLine("План не знайдено.");
+    return plan;
+}
+
+void PrintTreatmentPlans(TreatmentPlan[] plans, string emptyMessage)
+{
+    if (plans.Length == 0)
+    {
+        Console.WriteLine(emptyMessage);
+        return;
+    }
+    foreach (TreatmentPlan plan in plans)
+    {
+        Console.WriteLine(plan);
+    }
+}
+
 // Меню «Аналітика» (Лаба 10): п'ять звітів, що показують і природні, і додаткові порядки сортування.
 void AnalyticsMenu(Clinic clinic)
 {
