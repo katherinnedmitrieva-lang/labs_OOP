@@ -28,6 +28,9 @@ public class Clinic
     // Експорт звітів у текстові файли reports/yyyy-MM-dd/ (Лаба 12).
     public ClinicExporter Exporter { get; }
 
+    // Збереження пацієнтів між запусками у файл session.dat (Лаба 12).
+    public SessionManager Session { get; }
+
     public Clinic(string name)
     {
         Name = name;
@@ -42,6 +45,7 @@ public class Clinic
         TreatmentPlans = new TreatmentPlanManager();
         Logger = new ClinicLogger();
         Exporter = new ClinicExporter(this);
+        Session = new SessionManager();
     }
 
     public void DisplaySchedule(DateTime date)

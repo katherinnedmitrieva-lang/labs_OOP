@@ -84,6 +84,20 @@ Console.WriteLine($"Через UrgentAppointment: {urgentDemo.GetDescription()} 
 //    В UrgentAppointment: замінити new на override -> public override int GetPriority().
 //    Тоді виклик через змінну типу Appointment теж поверне 1 (за типом об'єкта).
 
+// ===== Збережена сесія (Лаба 12) =====
+// Початкові дані вже створено вище. Якщо від минулого запуску лишився session.dat — пропонуємо завантажити.
+// Початкові пацієнти не дублюються: Load пропускає тих, хто вже є (те саме ім'я, прізвище, дата народження).
+if (clinic.Session.Exists())
+{
+    Console.Write("Знайдено збережену сесію. Завантажити? (y/n): ");
+    if (ReadYesNo())
+    {
+        int loaded = clinic.Session.Load(clinic);
+        Console.WriteLine($"Завантажено {loaded} пацієнтів.");
+        clinic.Logger.LogInfo($"Завантажено сесію: {loaded} пацієнтів");
+    }
+}
+
 RunMainMenu(clinic);
 
 void RunMainMenu(Clinic activeClinic)
@@ -126,10 +140,45 @@ void RunMainMenu(Clinic activeClinic)
                 if (DateTime.TryParse(Console.ReadLine()!, out DateTime date))
                     activeClinic.DisplaySchedule(date);
                 break;
-            case "0": running = false; break;
+            case "0":
+                SaveSessionOnExit(activeClinic);
+                running = false;
+                break;
         }
     }
 }
+
+// При виході пропонуємо зберегти пацієнтів, щоб при наступному запуску їх можна було відновити.
+void SaveSessionOnExit(Clinic activeClinic)
+{
+    Console.Write("Зберегти сесію? (y/n): ");
+    if (!ReadYesNo()) return;
+
+    try
+    {
+        activeClinic.Session.Save(activeClinic);
+        Console.WriteLine("Сесію збережено.");
+        activeClinic.Logger.LogInfo($"Сесію збережено: {activeClinic.Patients.Count} пацієнтів");
+    }
+    catch (IOException e)
+    {
+        Console.WriteLine("Не вдалося зберегти сесію: " + e.Message);
+        activeClinic.Logger.LogError("Помилка збереження сесії: " + e.Message);
+    }
+    catch (UnauthorizedAccessException e)
+    {
+        Console.WriteLine("Немає доступу до файлу сесії: " + e.Message);
+        activeClinic.Logger.LogError("Помилка збереження сесії: " + e.Message);
+    }
+}
+
+// Відповідь «y/n». Усе, крім «y»/«yes»/«так», вважаємо «ні»; порожній ввід чи кінець введення — теж «ні».
+bool ReadYesNo()
+{
+    string answer = (Console.ReadLine() ?? "").Trim().ToLower();
+    return answer == "y" || answer == "yes" || answer == "так";
+}
+
 // Меню черги очікування (Лаба 09): працює з clinic.WaitingRoom — це WaitingQueue<Patient>.
 void WaitingRoomMenu(Clinic clinic)
 {
