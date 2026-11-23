@@ -217,6 +217,7 @@ void FilesMenu(Clinic clinic)
         Console.WriteLine("\n── Файли ──────────────────────────────");
         Console.WriteLine("  1. Останні рядки лога");
         Console.WriteLine("  2. Очистити лог");
+        Console.WriteLine("  3. Експортувати всі звіти");
         Console.WriteLine("  0. Назад");
         Console.Write("Оберіть: ");
         string? choice = Console.ReadLine();
@@ -264,6 +265,30 @@ void FilesMenu(Clinic clinic)
                     catch (UnauthorizedAccessException e)
                     {
                         Console.WriteLine("Немає доступу до файлу лога: " + e.Message);
+                    }
+                    break;
+                }
+            case "3":
+                {
+                    try
+                    {
+                        string[] paths = clinic.Exporter.ExportAll();
+                        Console.WriteLine("Створено файли звітів:");
+                        foreach (string path in paths)
+                        {
+                            Console.WriteLine("  " + path);
+                        }
+                        clinic.Logger.LogInfo($"Експортовано звітів: {paths.Length}");
+                    }
+                    catch (IOException e)
+                    {
+                        Console.WriteLine("Не вдалося експортувати звіти: " + e.Message);
+                        clinic.Logger.LogError("Помилка експорту звітів: " + e.Message);
+                    }
+                    catch (UnauthorizedAccessException e)
+                    {
+                        Console.WriteLine("Немає доступу до теки звітів: " + e.Message);
+                        clinic.Logger.LogError("Помилка експорту звітів: " + e.Message);
                     }
                     break;
                 }

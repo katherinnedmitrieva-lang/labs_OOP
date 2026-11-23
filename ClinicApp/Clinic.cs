@@ -25,6 +25,9 @@ public class Clinic
     // Журнал дій (Лаба 12): рядки з часовою міткою дописуються у файл clinic.log.
     public ClinicLogger Logger { get; }
 
+    // Експорт звітів у текстові файли reports/yyyy-MM-dd/ (Лаба 12).
+    public ClinicExporter Exporter { get; }
+
     public Clinic(string name)
     {
         Name = name;
@@ -38,6 +41,7 @@ public class Clinic
         Analytics = new AnalyticsManager(Appointments, Doctors, Patients);
         TreatmentPlans = new TreatmentPlanManager();
         Logger = new ClinicLogger();
+        Exporter = new ClinicExporter(this);
     }
 
     public void DisplaySchedule(DateTime date)
