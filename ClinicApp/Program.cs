@@ -218,6 +218,7 @@ void FilesMenu(Clinic clinic)
         Console.WriteLine("  1. Останні рядки лога");
         Console.WriteLine("  2. Очистити лог");
         Console.WriteLine("  3. Експортувати всі звіти");
+        Console.WriteLine("  4. Імпорт пацієнтів з CSV");
         Console.WriteLine("  0. Назад");
         Console.Write("Оберіть: ");
         string? choice = Console.ReadLine();
@@ -290,6 +291,16 @@ void FilesMenu(Clinic clinic)
                         Console.WriteLine("Немає доступу до теки звітів: " + e.Message);
                         clinic.Logger.LogError("Помилка експорту звітів: " + e.Message);
                     }
+                    break;
+                }
+            case "4":
+                {
+                    Console.Write("Шлях до CSV-файлу: ");
+                    // Trim('"') — Windows додає лапки, коли шлях копіюють через «Копіювати як шлях».
+                    string csvPath = (Console.ReadLine() ?? "").Trim().Trim('"');
+                    ImportResult importResult = CsvImporter.ImportPatients(clinic, csvPath);
+                    importResult.Print();
+                    clinic.Logger.LogInfo($"Імпорт CSV «{csvPath}»: імпортовано {importResult.Imported}, пропущено {importResult.Skipped}");
                     break;
                 }
             case "0": inMenu = false; break;
