@@ -22,6 +22,15 @@ public class Clinic
     // Плани лікування (Лаба 11): зберігаються лише після перевірки ModelValidator.
     public TreatmentPlanManager TreatmentPlans { get; }
 
+    // Журнал дій (Лаба 12): рядки з часовою міткою дописуються у файл clinic.log.
+    public ClinicLogger Logger { get; }
+
+    // Експорт звітів у текстові файли reports/yyyy-MM-dd/ (Лаба 12).
+    public ClinicExporter Exporter { get; }
+
+    // Збереження пацієнтів між запусками у файл session.dat (Лаба 12).
+    public SessionManager Session { get; }
+
     public Clinic(string name)
     {
         Name = name;
@@ -34,6 +43,9 @@ public class Clinic
         // Створюється ПІСЛЯ Patients, Doctors і Appointments: конструктор отримує вже готові менеджери.
         Analytics = new AnalyticsManager(Appointments, Doctors, Patients);
         TreatmentPlans = new TreatmentPlanManager();
+        Logger = new ClinicLogger();
+        Exporter = new ClinicExporter(this);
+        Session = new SessionManager();
     }
 
     public void DisplaySchedule(DateTime date)

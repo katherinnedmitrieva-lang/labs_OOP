@@ -84,6 +84,20 @@ Console.WriteLine($"Через UrgentAppointment: {urgentDemo.GetDescription()} 
 //    В UrgentAppointment: замінити new на override -> public override int GetPriority().
 //    Тоді виклик через змінну типу Appointment теж поверне 1 (за типом об'єкта).
 
+// ===== Збережена сесія (Лаба 12) =====
+// Початкові дані вже створено вище. Якщо від минулого запуску лишився session.dat — пропонуємо завантажити.
+// Початкові пацієнти не дублюються: Load пропускає тих, хто вже є (те саме ім'я, прізвище, дата народження).
+if (clinic.Session.Exists())
+{
+    Console.Write("Знайдено збережену сесію. Завантажити? (y/n): ");
+    if (ReadYesNo())
+    {
+        int loaded = clinic.Session.Load(clinic);
+        Console.WriteLine($"Завантажено {loaded} пацієнтів.");
+        clinic.Logger.LogInfo($"Завантажено сесію: {loaded} пацієнтів");
+    }
+}
+
 RunMainMenu(clinic);
 
 void RunMainMenu(Clinic activeClinic)
@@ -101,8 +115,9 @@ void RunMainMenu(Clinic activeClinic)
         Console.WriteLine("7 — Звіт клініки");
         Console.WriteLine("8 — Аналітика");
         Console.WriteLine("9 — Плани лікування — рефлексія, атрибути");
-        Console.WriteLine("10 — Тест GrowablePatientManager");
-        Console.WriteLine("11 — Розклад на дату");
+        Console.WriteLine("10 — Файли");
+        Console.WriteLine("11 — Тест GrowablePatientManager");
+        Console.WriteLine("12 — Розклад на дату");
         Console.WriteLine("0 — Вихід");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
@@ -118,16 +133,52 @@ void RunMainMenu(Clinic activeClinic)
             case "7": activeClinic.GenerateReport(); break;
             case "8": AnalyticsMenu(activeClinic); break;
             case "9": TreatmentPlanMenu(activeClinic); break;
-            case "10": RunGrowableDemo(); break;
-            case "11":
+            case "10": FilesMenu(activeClinic); break;
+            case "11": RunGrowableDemo(); break;
+            case "12":
                 Console.Write("Дата (дд.мм.рррр): ");
                 if (DateTime.TryParse(Console.ReadLine()!, out DateTime date))
                     activeClinic.DisplaySchedule(date);
                 break;
-            case "0": running = false; break;
+            case "0":
+                SaveSessionOnExit(activeClinic);
+                running = false;
+                break;
         }
     }
 }
+
+// При виході пропонуємо зберегти пацієнтів, щоб при наступному запуску їх можна було відновити.
+void SaveSessionOnExit(Clinic activeClinic)
+{
+    Console.Write("Зберегти сесію? (y/n): ");
+    if (!ReadYesNo()) return;
+
+    try
+    {
+        activeClinic.Session.Save(activeClinic);
+        Console.WriteLine("Сесію збережено.");
+        activeClinic.Logger.LogInfo($"Сесію збережено: {activeClinic.Patients.Count} пацієнтів");
+    }
+    catch (IOException e)
+    {
+        Console.WriteLine("Не вдалося зберегти сесію: " + e.Message);
+        activeClinic.Logger.LogError("Помилка збереження сесії: " + e.Message);
+    }
+    catch (UnauthorizedAccessException e)
+    {
+        Console.WriteLine("Немає доступу до файлу сесії: " + e.Message);
+        activeClinic.Logger.LogError("Помилка збереження сесії: " + e.Message);
+    }
+}
+
+// Відповідь «y/n». Усе, крім «y»/«yes»/«так», вважаємо «ні»; порожній ввід чи кінець введення — теж «ні».
+bool ReadYesNo()
+{
+    string answer = (Console.ReadLine() ?? "").Trim().ToLower();
+    return answer == "y" || answer == "yes" || answer == "так";
+}
+
 // Меню черги очікування (Лаба 09): працює з clinic.WaitingRoom — це WaitingQueue<Patient>.
 void WaitingRoomMenu(Clinic clinic)
 {
@@ -170,6 +221,7 @@ void WaitingRoomMenu(Clinic clinic)
                     catch (InvalidOperationException e)
                     {
                         Console.WriteLine("Помилка: " + e.Message);
+                        clinic.Logger.LogWarning("Помилка черги: " + ErrorText(e));
                     }
                     break;
                 }
@@ -184,6 +236,7 @@ void WaitingRoomMenu(Clinic clinic)
                     catch (InvalidOperationException e)
                     {
                         Console.WriteLine("Помилка: " + e.Message);
+                        clinic.Logger.LogWarning("Помилка черги: " + ErrorText(e));
                     }
                     break;
                 }
@@ -204,6 +257,107 @@ void WaitingRoomMenu(Clinic clinic)
         }
     }
 }
+// Меню «Файли» (Лаба 12): журнал, експорт звітів, імпорт CSV.
+void FilesMenu(Clinic clinic)
+{
+    bool inMenu = true;
+    while (inMenu)
+    {
+        Console.WriteLine("\n── Файли ──────────────────────────────");
+        Console.WriteLine("  1. Останні рядки лога");
+        Console.WriteLine("  2. Очистити лог");
+        Console.WriteLine("  3. Експортувати всі звіти");
+        Console.WriteLine("  4. Імпорт пацієнтів з CSV");
+        Console.WriteLine("  0. Назад");
+        Console.Write("Оберіть: ");
+        string? choice = Console.ReadLine();
+        if (choice == null) break;   // кінець введення — виходимо, а не крутимо цикл вічно
+
+        switch (choice.Trim())
+        {
+            case "1":
+                {
+                    if (!TryReadInt("Скільки останніх рядків показати? ", out int count)) break;
+                    if (count <= 0)
+                    {
+                        Console.WriteLine("Кількість має бути більшою за 0.");
+                        break;
+                    }
+                    string[] lines = clinic.Logger.GetLastLines(count);
+                    if (lines.Length == 0)
+                    {
+                        Console.WriteLine("Лог порожній або файлу ще немає.");
+                        break;
+                    }
+                    Console.WriteLine($"Останні рядки лога ({lines.Length}):");
+                    foreach (string line in lines)
+                    {
+                        Console.WriteLine(line);
+                    }
+                    break;
+                }
+            case "2":
+                {
+                    if (!clinic.Logger.Exists())
+                    {
+                        Console.WriteLine("Лог уже порожній: файлу немає.");
+                        break;
+                    }
+                    try
+                    {
+                        clinic.Logger.Clear();
+                        Console.WriteLine("Лог очищено.");
+                    }
+                    catch (IOException e)
+                    {
+                        Console.WriteLine("Не вдалося очистити лог: " + e.Message);
+                    }
+                    catch (UnauthorizedAccessException e)
+                    {
+                        Console.WriteLine("Немає доступу до файлу лога: " + e.Message);
+                    }
+                    break;
+                }
+            case "3":
+                {
+                    try
+                    {
+                        string[] paths = clinic.Exporter.ExportAll();
+                        Console.WriteLine("Створено файли звітів:");
+                        foreach (string path in paths)
+                        {
+                            Console.WriteLine("  " + path);
+                        }
+                        clinic.Logger.LogInfo($"Експортовано звітів: {paths.Length}");
+                    }
+                    catch (IOException e)
+                    {
+                        Console.WriteLine("Не вдалося експортувати звіти: " + e.Message);
+                        clinic.Logger.LogError("Помилка експорту звітів: " + e.Message);
+                    }
+                    catch (UnauthorizedAccessException e)
+                    {
+                        Console.WriteLine("Немає доступу до теки звітів: " + e.Message);
+                        clinic.Logger.LogError("Помилка експорту звітів: " + e.Message);
+                    }
+                    break;
+                }
+            case "4":
+                {
+                    Console.Write("Шлях до CSV-файлу: ");
+                    // Trim('"') — Windows додає лапки, коли шлях копіюють через «Копіювати як шлях».
+                    string csvPath = (Console.ReadLine() ?? "").Trim().Trim('"');
+                    ImportResult importResult = CsvImporter.ImportPatients(clinic, csvPath);
+                    importResult.Print();
+                    clinic.Logger.LogInfo($"Імпорт CSV «{csvPath}»: імпортовано {importResult.Imported}, пропущено {importResult.Skipped}");
+                    break;
+                }
+            case "0": inMenu = false; break;
+            default: Console.WriteLine("Невідомий пункт меню."); break;
+        }
+    }
+}
+
 // Меню «Плани лікування» (Лаба 11): показує роботу атрибутів і рефлексії.
 void TreatmentPlanMenu(Clinic clinic)
 {
@@ -431,6 +585,7 @@ void RunBillingMenu(BillingManager billingManager)
         Console.WriteLine("\nРахунки:");
         Console.WriteLine("1. Показати неоплачені рахунки");
         Console.WriteLine("2. Показати загальний борг");
+        Console.WriteLine("3. Оплатити запис");
         Console.WriteLine("0. Назад");
         Console.Write("Ваш вибір: ");
         string choice = Console.ReadLine()!;
@@ -444,6 +599,31 @@ void RunBillingMenu(BillingManager billingManager)
             case "2":
                 Console.WriteLine($"Загальний борг: {billingManager.GetTotalDebt()} грн");
                 break;
+            case "3":
+                {
+                    if (!TryReadInt("ID запису: ", out int payId)) break;
+                    Appointment? toPay = clinic.Appointments.FindById(payId);
+                    if (toPay == null)
+                    {
+                        Console.WriteLine("Запис не знайдено.");
+                        break;
+                    }
+                    // MarkPaid() на скасованому записі мовчки нічого не робить, тому перевіряємо стан заздалегідь.
+                    if (toPay.IsCancelled)
+                    {
+                        Console.WriteLine("Скасований запис оплатити не можна.");
+                        break;
+                    }
+                    if (toPay.IsPaid)
+                    {
+                        Console.WriteLine("Цей запис уже оплачено.");
+                        break;
+                    }
+                    toPay.MarkPaid();
+                    Console.WriteLine($"Запис [{toPay.Id}] оплачено: {toPay.Cost:F2} грн.");
+                    clinic.Logger.LogInfo($"Оплачено запис #{toPay.Id}: {toPay.Cost:F2} грн");
+                    break;
+                }
             case "0": inMenu = false; break;
         }
     }
@@ -481,15 +661,19 @@ void RunPatientsMenu(PatientManager manager)
                     }
 
                     Console.Write("Телефон: "); string ph = Console.ReadLine()!;
-                    manager.Add(new Patient(fn, ln, dob, bType, ph));
+                    Patient newPatient = new Patient(fn, ln, dob, bType, ph);
+                    manager.Add(newPatient);
+                    clinic.Logger.LogInfo($"Додано пацієнта #{newPatient.Id}: {newPatient.FullName}");
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
                     Console.WriteLine("Помилка (значення поза межами): " + e.Message);
+                    clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                 }
                 catch (ArgumentException e)
                 {
                     Console.WriteLine("Помилка: " + e.Message);
+                    clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                 }
                 break;
             case "3":
@@ -549,14 +733,17 @@ void RunDoctorsMenu(DoctorManager manager)
                     Doctor newDoc = new Doctor(fn, ln, spec, lic, ph);
                     newDoc.Schedule = schedule;
                     manager.Add(newDoc);
+                    clinic.Logger.LogInfo($"Додано лікаря #{newDoc.Id}: {newDoc.FullName}");
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
                     Console.WriteLine("Помилка (значення поза межами): " + e.Message);
+                    clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                 }
                 catch (ArgumentException e)
                 {
                     Console.WriteLine("Помилка: " + e.Message);
+                    clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                 }
                 break;
             case "3":
@@ -607,6 +794,7 @@ void RunDoctorsMenu(DoctorManager manager)
                                 catch (Exception ex)
                                 {
                                     Console.WriteLine("Помилка: " + ex.Message);
+                                    clinic.Logger.LogWarning("Помилка введення: " + ErrorText(ex));
                                 }
                             }
                         }
@@ -649,24 +837,48 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
                     Console.Write("ID лікаря: "); int.TryParse(Console.ReadLine()!, out int did);
                     Console.Write("Дата та час: "); DateTime.TryParse(Console.ReadLine()!, out DateTime sched);
                     Console.Write("Тривалість (хв): "); int.TryParse(Console.ReadLine()!, out int dur);
-                    manager.Book(pid, did, sched, dur);
+                    if (manager.Book(pid, did, sched, dur))
+                    {
+                        // Щойно створений запис — останній у менеджері; з нього беремо ID для журналу.
+                        Appointment? created = manager[manager.Count - 1];
+                        if (created != null)
+                            clinic.Logger.LogInfo($"Запис #{created.Id} створено: пацієнт #{pid} → лікар #{did}");
+                    }
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
                     Console.WriteLine("Помилка (значення поза межами): " + e.Message);
+                    clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                 }
                 catch (ArgumentException e)
                 {
                     Console.WriteLine("Помилка: " + e.Message);
+                    clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                 }
                 break;
             case "3":
                 Console.Write("ID запису: "); int.TryParse(Console.ReadLine()!, out int cid);
-                manager.Cancel(cid);
+                if (manager.Cancel(cid))
+                {
+                    Console.WriteLine($"Запис [{cid}] скасовано.");
+                    clinic.Logger.LogInfo($"Запис #{cid} скасовано");
+                }
+                else
+                {
+                    Console.WriteLine("Не вдалося скасувати: запис не знайдено або він уже не активний.");
+                }
                 break;
             case "4":
                 Console.Write("ID запису: "); int.TryParse(Console.ReadLine()!, out int fid);
-                manager.Complete(fid);
+                if (manager.Complete(fid))
+                {
+                    Console.WriteLine($"Запис [{fid}] завершено.");
+                    clinic.Logger.LogInfo($"Запис #{fid} завершено");
+                }
+                else
+                {
+                    Console.WriteLine("Не вдалося завершити: запис не знайдено або він уже не активний.");
+                }
                 break;
             case "8": // Вимоги завд. 4: масове скасування через AppointmentManager.CancelAll
                 patients.DisplayAll();
@@ -685,6 +897,8 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
 
                     int cancelledCount = AppointmentManager.CancelAll(patientItems, reason);
                     Console.WriteLine($"Успішно скасовано записів: {cancelledCount}");
+                    if (cancelledCount > 0)
+                        clinic.Logger.LogInfo($"Скасовано записів пацієнта #{patientId}: {cancelledCount}");
                 }
                 break;
             case "9": // Перегляд записів за типом (GetUrgent / GetSpecialist / GetRegular)
@@ -773,10 +987,12 @@ void RunMedicalRecordsMenu(Clinic activeClinic)
                     catch (ArgumentOutOfRangeException e)
                     {
                         Console.WriteLine("Помилка (значення поза межами): " + e.Message);
+                        clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                     }
                     catch (ArgumentException e)
                     {
                         Console.WriteLine("Помилка: " + e.Message);
+                        clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                     }
                     break;
                 }
@@ -798,10 +1014,12 @@ void RunMedicalRecordsMenu(Clinic activeClinic)
                     catch (ArgumentOutOfRangeException e)
                     {
                         Console.WriteLine("Помилка (значення поза межами): " + e.Message);
+                        clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                     }
                     catch (ArgumentException e)
                     {
                         Console.WriteLine("Помилка: " + e.Message);
+                        clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                     }
                     break;
                 }
@@ -822,10 +1040,12 @@ void RunMedicalRecordsMenu(Clinic activeClinic)
                     catch (ArgumentOutOfRangeException e)
                     {
                         Console.WriteLine("Помилка (значення поза межами): " + e.Message);
+                        clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                     }
                     catch (ArgumentException e)
                     {
                         Console.WriteLine("Помилка: " + e.Message);
+                        clinic.Logger.LogWarning("Помилка введення: " + ErrorText(e));
                     }
                     break;
                 }
@@ -838,6 +1058,16 @@ void RunMedicalRecordsMenu(Clinic activeClinic)
             case "0": inMenu = false; break;
         }
     }
+}
+
+// Текст помилки для журналу: .NET дописує до ArgumentException технічний суфікс « (Parameter 'phone')» —
+// у журналі він зайвий, тому відрізаємо його.
+string ErrorText(Exception e)
+{
+    string message = e.Message;
+    int index = message.IndexOf(" (Parameter '");
+    if (index >= 0) message = message.Substring(0, index);
+    return message;
 }
 
 bool TryReadInt(string prompt, out int value)
