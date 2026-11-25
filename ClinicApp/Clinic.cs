@@ -31,6 +31,12 @@ public class Clinic
     // Збереження пацієнтів між запусками у файл session.dat (Лаба 12).
     public SessionManager Session { get; }
 
+    // Генерація паспорта пацієнта (Лаба 13): другий незалежний підписник подій.
+    public PatientPassportWriter Passport { get; }
+
+    // Підсумок сесії й реакція на події з іншої підсистеми — черги очікування (Лаба 13): третій підписник.
+    public SessionEventTracker Tracker { get; }
+
     public Clinic(string name)
     {
         Name = name;
@@ -46,6 +52,40 @@ public class Clinic
         Logger = new ClinicLogger();
         Exporter = new ClinicExporter(this);
         Session = new SessionManager();
+        Passport = new PatientPassportWriter(this);
+        Tracker = new SessionEventTracker(this);
+
+        // В КІНЦІ конструктора: підписувати можна лише тоді, коли вже створено і менеджери (джерела подій),
+        // і Logger (підписник).
+        SubscribeEvents();
+    }
+
+    // Clinic — «оркестратор»: він знає всі менеджери й вирішує, хто на що підписаний. Менеджери нічого не знають
+    // про підписників, а Program.cs не мусить пам'ятати викликати Logger після кожної дії.
+    // Підписка — це += з посиланням на метод (без дужок).
+    private void SubscribeEvents()
+    {
+        Patients.PatientAdded += Logger.OnPatientAdded;
+        Appointments.AppointmentBooked += Logger.OnAppointmentBooked;
+        Appointments.UrgentAppointmentBooked += Logger.OnUrgentAppointmentBooked;
+        Appointments.AppointmentCancelled += Logger.OnAppointmentCancelled;
+        Appointments.AppointmentCompleted += Logger.OnAppointmentCompleted;
+        Billing.PaymentReceived += Logger.OnPaymentReceived;
+        TreatmentPlans.PlanCompleted += Logger.OnPlanCompleted;
+
+        // Паспорт пацієнта оновлюється при реєстрації, після завершеного прийому і після завершеного плану.
+        Patients.PatientAdded += Passport.OnPatientAdded;
+        Appointments.AppointmentCompleted += Passport.OnAppointmentCompleted;
+        TreatmentPlans.PlanCompleted += Passport.OnPlanCompleted;
+
+        // Tracker підписаний на ВСІ події: одні й ті самі події слухають кілька незалежних підписників, і порядок між ними не важливий.
+        Patients.PatientAdded += Tracker.OnPatientAdded;
+        Appointments.AppointmentBooked += Tracker.OnAppointmentBooked;
+        Appointments.UrgentAppointmentBooked += Tracker.OnUrgentAppointmentBooked;
+        Appointments.AppointmentCancelled += Tracker.OnAppointmentCancelled;
+        Appointments.AppointmentCompleted += Tracker.OnAppointmentCompleted;
+        Billing.PaymentReceived += Tracker.OnPaymentReceived;
+        TreatmentPlans.PlanCompleted += Tracker.OnPlanCompleted;
     }
 
     public void DisplaySchedule(DateTime date)

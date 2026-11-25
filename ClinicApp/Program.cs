@@ -4,6 +4,7 @@ using System.Threading;
 using ClinicApp;
 using ClinicApp.Comparators;
 using ClinicApp.Enums;
+using ClinicApp.Events;
 using ClinicApp.Interfaces;
 using ClinicApp.Managers;
 using ClinicApp.Models;
@@ -14,6 +15,10 @@ Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
 Clinic clinic = new Clinic("Медична Клініка \"Здоров'я\"");
+
+// Підписка на подію ДО створення початкових даних: подія, піднята до підписки, пропадає — її ніхто не почує.
+// Методу передаємо без дужок (це посилання на метод, а не його виклик): += додає його до списку обробників події.
+clinic.Appointments.AppointmentBooked += OnAppointmentBookedConsole;
 
 Patient p1 = new Patient("Іван", "Петренко", new DateTime(1985, 3, 12), BloodType.APositive, "0501234567");
 Patient p2 = new Patient("Олена", "Коваль", new DateTime(1993, 7, 4), BloodType.BNegative, "0672345678");
@@ -141,10 +146,33 @@ void RunMainMenu(Clinic activeClinic)
                     activeClinic.DisplaySchedule(date);
                 break;
             case "0":
+                // Підсумок сесії — ПЕРЕД збереженням сесії (за специфікацією).
+                ShowSessionSummary(activeClinic);
                 SaveSessionOnExit(activeClinic);
                 running = false;
                 break;
         }
+    }
+}
+
+// Підсумок сесії: у консоль і у файл session_summary.txt. Збій запису файлу не повинен заважати виходу з програми.
+void ShowSessionSummary(Clinic activeClinic)
+{
+    activeClinic.Tracker.PrintSummary();
+    try
+    {
+        activeClinic.Tracker.SaveSummary();
+        Console.WriteLine("Підсумок збережено у session_summary.txt.");
+    }
+    catch (IOException e)
+    {
+        Console.WriteLine("Не вдалося зберегти підсумок: " + e.Message);
+        activeClinic.Logger.LogError("Помилка збереження підсумку сесії: " + e.Message);
+    }
+    catch (UnauthorizedAccessException e)
+    {
+        Console.WriteLine("Немає доступу до файлу підсумку: " + e.Message);
+        activeClinic.Logger.LogError("Помилка збереження підсумку сесії: " + e.Message);
     }
 }
 
@@ -413,7 +441,8 @@ void TreatmentPlanMenu(Clinic clinic)
                 {
                     TreatmentPlan? plan = ReadTreatmentPlan(clinic);
                     if (plan == null) break;
-                    if (plan.Complete())
+                    // Завершення йде через менеджер: він піднімає подію PlanCompleted, на яку реагують підписники.
+                    if (clinic.TreatmentPlans.Complete(plan.Id))
                         Console.WriteLine($"План [{plan.Id}] завершено. Статус: {plan.Status}.");
                     else
                         Console.WriteLine($"Перехід неможливий: завершити можна лише активний план (зараз — {plan.Status}).");
@@ -608,7 +637,7 @@ void RunBillingMenu(BillingManager billingManager)
                         Console.WriteLine("Запис не знайдено.");
                         break;
                     }
-                    // MarkPaid() на скасованому записі мовчки нічого не робить, тому перевіряємо стан заздалегідь.
+                    // Скасований або вже оплачений запис оплатити не можна — повідомляємо причину.
                     if (toPay.IsCancelled)
                     {
                         Console.WriteLine("Скасований запис оплатити не можна.");
@@ -619,9 +648,9 @@ void RunBillingMenu(BillingManager billingManager)
                         Console.WriteLine("Цей запис уже оплачено.");
                         break;
                     }
-                    toPay.MarkPaid();
-                    Console.WriteLine($"Запис [{toPay.Id}] оплачено: {toPay.Cost:F2} грн.");
-                    clinic.Logger.LogInfo($"Оплачено запис #{toPay.Id}: {toPay.Cost:F2} грн");
+                    // Оплату виконує менеджер рахунків: він сам піднімає PaymentReceived, а Logger запише це в лог.
+                    if (billingManager.PayAppointment(toPay.Id))
+                        Console.WriteLine($"Запис [{toPay.Id}] оплачено: {toPay.Cost:F2} грн.");
                     break;
                 }
             case "0": inMenu = false; break;
@@ -663,7 +692,6 @@ void RunPatientsMenu(PatientManager manager)
                     Console.Write("Телефон: "); string ph = Console.ReadLine()!;
                     Patient newPatient = new Patient(fn, ln, dob, bType, ph);
                     manager.Add(newPatient);
-                    clinic.Logger.LogInfo($"Додано пацієнта #{newPatient.Id}: {newPatient.FullName}");
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
@@ -837,13 +865,7 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
                     Console.Write("ID лікаря: "); int.TryParse(Console.ReadLine()!, out int did);
                     Console.Write("Дата та час: "); DateTime.TryParse(Console.ReadLine()!, out DateTime sched);
                     Console.Write("Тривалість (хв): "); int.TryParse(Console.ReadLine()!, out int dur);
-                    if (manager.Book(pid, did, sched, dur))
-                    {
-                        // Щойно створений запис — останній у менеджері; з нього беремо ID для журналу.
-                        Appointment? created = manager[manager.Count - 1];
-                        if (created != null)
-                            clinic.Logger.LogInfo($"Запис #{created.Id} створено: пацієнт #{pid} → лікар #{did}");
-                    }
+                    manager.Book(pid, did, sched, dur);
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
@@ -861,7 +883,6 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
                 if (manager.Cancel(cid))
                 {
                     Console.WriteLine($"Запис [{cid}] скасовано.");
-                    clinic.Logger.LogInfo($"Запис #{cid} скасовано");
                 }
                 else
                 {
@@ -873,14 +894,13 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
                 if (manager.Complete(fid))
                 {
                     Console.WriteLine($"Запис [{fid}] завершено.");
-                    clinic.Logger.LogInfo($"Запис #{fid} завершено");
                 }
                 else
                 {
                     Console.WriteLine("Не вдалося завершити: запис не знайдено або він уже не активний.");
                 }
                 break;
-            case "8": // Вимоги завд. 4: масове скасування через AppointmentManager.CancelAll
+            case "8": // Вимоги завд. 4: масове скасування через CancelAll
                 patients.DisplayAll();
                 Console.Write("Введіть ID пацієнта, записи якого треба скасувати: ");
                 if (int.TryParse(Console.ReadLine()!, out int patientId))
@@ -895,10 +915,8 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
                         .Cast<ICancellable>()
                         .ToArray();
 
-                    int cancelledCount = AppointmentManager.CancelAll(patientItems, reason);
+                    int cancelledCount = manager.CancelAll(patientItems, reason);
                     Console.WriteLine($"Успішно скасовано записів: {cancelledCount}");
-                    if (cancelledCount > 0)
-                        clinic.Logger.LogInfo($"Скасовано записів пацієнта #{patientId}: {cancelledCount}");
                 }
                 break;
             case "9": // Перегляд записів за типом (GetUrgent / GetSpecialist / GetRegular)
@@ -1058,6 +1076,14 @@ void RunMedicalRecordsMenu(Clinic activeClinic)
             case "0": inMenu = false; break;
         }
     }
+}
+
+// Обробник події AppointmentBooked: виводить рядок у консоль. Сигнатура (object? sender, AppointmentEventArgs e)
+// визначається делегатом EventHandler<AppointmentEventArgs>. static — бо обробник не користується локальними змінними.
+// У коді меню немає жодного виклику цього методу: його викликає сама подія.
+static void OnAppointmentBookedConsole(object? sender, AppointmentEventArgs e)
+{
+    Console.WriteLine($"  [EVENT] Запис #{e.AppointmentId} створено: пацієнт #{e.PatientId} → лікар #{e.DoctorId}, {e.ScheduledAt:dd.MM.yyyy HH:mm}");
 }
 
 // Текст помилки для журналу: .NET дописує до ArgumentException технічний суфікс « (Parameter 'phone')» —
