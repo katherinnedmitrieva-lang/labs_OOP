@@ -23,6 +23,15 @@ public class AppointmentManager
     // присвоїти = null чи викликати подію напряму не можна. «?» означає, що підписників може не бути.
     public event EventHandler<AppointmentEventArgs>? AppointmentBooked;
 
+    // Терміновий запис — теж запис, тому BookUrgent піднімає ОБИДВІ події: AppointmentBooked і UrgentAppointmentBooked.
+    public event EventHandler<AppointmentEventArgs>? UrgentAppointmentBooked;
+
+    // Запис скасовано (Cancel або CancelAll — для кожного скасованого запису).
+    public event EventHandler<AppointmentEventArgs>? AppointmentCancelled;
+
+    // Запис завершено (Complete).
+    public event EventHandler<AppointmentEventArgs>? AppointmentCompleted;
+
     public Appointment? this[int index]
     {
         get
@@ -48,7 +57,12 @@ public class AppointmentManager
     // Терміновий прийом
     public bool BookUrgent(int patientId, int doctorId, DateTime scheduledAt, string urgencyNote = "", int durationMinutes = 30)
     {
-        return AddAppointment(new UrgentAppointment(patientId, doctorId, scheduledAt, urgencyNote, durationMinutes));
+        UrgentAppointment urgent = new UrgentAppointment(patientId, doctorId, scheduledAt, urgencyNote, durationMinutes);
+
+        // AddAppointment уже підняв AppointmentBooked. Подію UrgentAppointmentBooked піднімаємо лише після УСПІШНОГО створення.
+        if (!AddAppointment(urgent)) return false;
+        UrgentAppointmentBooked?.Invoke(this, CreateBookingArgs(urgent));
+        return true;
     }
 
     // Консультація спеціаліста
@@ -85,6 +99,12 @@ public class AppointmentManager
         if (app is UrgentAppointment urgent) notes = urgent.UrgencyNote;
         else if (app is SpecialistAppointment specialist) notes = specialist.ConsultationTopic;
         return new AppointmentEventArgs(app.Id, app.PatientId, app.DoctorId, app.ScheduledAt, notes);
+    }
+
+    // Дані для подій скасування й завершення. У Notes — примітка запису (при скасуванні там причина скасування).
+    private static AppointmentEventArgs CreateStateArgs(Appointment app)
+    {
+        return new AppointmentEventArgs(app.Id, app.PatientId, app.DoctorId, app.ScheduledAt, app.Notes);
     }
 
     public Appointment? FindById(int id)
@@ -153,14 +173,20 @@ public class AppointmentManager
     {
         Appointment? app = FindById(id);
         if (app == null) return false;
-        return app.Cancel(reason);
+        if (!app.Cancel(reason)) return false;   // запис уже не активний — нічого не сталося, події немає
+
+        AppointmentCancelled?.Invoke(this, CreateStateArgs(app));
+        return true;
     }
 
     public bool Complete(int id)
     {
         Appointment? app = FindById(id);
         if (app == null) return false;
-        return app.Complete();
+        if (!app.Complete()) return false;
+
+        AppointmentCompleted?.Invoke(this, CreateStateArgs(app));
+        return true;
     }
 
     public void DisplayList(Appointment[] list)
@@ -262,7 +288,9 @@ public class AppointmentManager
     {
         return (Appointment[])_appointments.Clone();
     }
-    public static int CancelAll(ICancellable[] items, string reason = "")
+    // Раніше метод був static. Подія належить ЕКЗЕМПЛЯРУ менеджера, а статичний метод екземпляра не має,
+    // тому CancelAll став звичайним методом: тепер він може піднімати AppointmentCancelled.
+    public int CancelAll(ICancellable[] items, string reason = "")
     {
         int count = 0;
         foreach (var item in items)
@@ -270,6 +298,9 @@ public class AppointmentManager
             if (!item.IsCancelled && item.Cancel(reason))
             {
                 count++;
+                // Подія — для КОЖНОГО скасованого запису. Елемент, який не є записом на прийом, події не має.
+                if (item is Appointment app)
+                    AppointmentCancelled?.Invoke(this, CreateStateArgs(app));
             }
         }
         return count;

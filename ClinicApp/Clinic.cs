@@ -46,6 +46,24 @@ public class Clinic
         Logger = new ClinicLogger();
         Exporter = new ClinicExporter(this);
         Session = new SessionManager();
+
+        // В КІНЦІ конструктора: підписувати можна лише тоді, коли вже створено і менеджери (джерела подій),
+        // і Logger (підписник).
+        SubscribeEvents();
+    }
+
+    // Clinic — «оркестратор»: він знає всі менеджери й вирішує, хто на що підписаний. Менеджери нічого не знають
+    // про підписників, а Program.cs не мусить пам'ятати викликати Logger після кожної дії.
+    // Підписка — це += з посиланням на метод (без дужок).
+    private void SubscribeEvents()
+    {
+        Patients.PatientAdded += Logger.OnPatientAdded;
+        Appointments.AppointmentBooked += Logger.OnAppointmentBooked;
+        Appointments.UrgentAppointmentBooked += Logger.OnUrgentAppointmentBooked;
+        Appointments.AppointmentCancelled += Logger.OnAppointmentCancelled;
+        Appointments.AppointmentCompleted += Logger.OnAppointmentCompleted;
+        Billing.PaymentReceived += Logger.OnPaymentReceived;
+        TreatmentPlans.PlanCompleted += Logger.OnPlanCompleted;
     }
 
     public void DisplaySchedule(DateTime date)

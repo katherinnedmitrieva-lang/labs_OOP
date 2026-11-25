@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ClinicApp.Enums;
+using ClinicApp.Events;
 using ClinicApp.Models;
 using ClinicApp.Utils;
 
@@ -11,6 +12,9 @@ namespace ClinicApp.Managers;
 public class TreatmentPlanManager
 {
     private readonly List<TreatmentPlan> _plans = new List<TreatmentPlan>();
+
+    // Подія «план лікування завершено». Піднімається лише коли перехід у стан Completed справді відбувся.
+    public event EventHandler<TreatmentPlanEventArgs>? PlanCompleted;
 
     // Повертає true, якщо план додано. Інакше виводить помилки й повертає false.
     public bool Add(TreatmentPlan plan)
@@ -33,6 +37,17 @@ public class TreatmentPlanManager
         }
 
         _plans.Add(plan);
+        return true;
+    }
+
+    // Завершує план за ID. Повертає false, якщо плану немає або перехід неможливий (завершити можна лише активний план).
+    public bool Complete(int planId)
+    {
+        TreatmentPlan? plan = GetById(planId);
+        if (plan == null) return false;
+        if (!plan.Complete()) return false;
+
+        PlanCompleted?.Invoke(this, new TreatmentPlanEventArgs(plan.Id, plan.PatientId, plan.Diagnosis));
         return true;
     }
 

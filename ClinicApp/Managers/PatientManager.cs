@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using ClinicApp.Enums;
+using ClinicApp.Events;
 using ClinicApp.Models;
 
 namespace ClinicApp.Managers;
@@ -16,6 +17,9 @@ public class PatientManager
     // Кількість елементів тепер рахує сам список.
     public int Count => _patients.Count;
 
+    // Подія «пацієнта додано». Піднімається після кожного успішного Add().
+    public event EventHandler<PatientEventArgs>? PatientAdded;
+
     public Patient? this[int index]
     {
         get
@@ -30,6 +34,8 @@ public class PatientManager
         // Без перевірки ліміту: List<T> сам розширюється.
         _patients.Add(patient);
         Console.WriteLine($"Пацієнта [{patient.Id}] {patient.FullName} додано.");
+
+        PatientAdded?.Invoke(this, new PatientEventArgs(patient.Id, patient.FullName));
     }
 
     public Patient? FindById(int id)

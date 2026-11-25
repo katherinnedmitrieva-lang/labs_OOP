@@ -418,7 +418,8 @@ void TreatmentPlanMenu(Clinic clinic)
                 {
                     TreatmentPlan? plan = ReadTreatmentPlan(clinic);
                     if (plan == null) break;
-                    if (plan.Complete())
+                    // Завершення йде через менеджер: він піднімає подію PlanCompleted, на яку реагують підписники.
+                    if (clinic.TreatmentPlans.Complete(plan.Id))
                         Console.WriteLine($"План [{plan.Id}] завершено. Статус: {plan.Status}.");
                     else
                         Console.WriteLine($"Перехід неможливий: завершити можна лише активний план (зараз — {plan.Status}).");
@@ -613,7 +614,7 @@ void RunBillingMenu(BillingManager billingManager)
                         Console.WriteLine("Запис не знайдено.");
                         break;
                     }
-                    // MarkPaid() на скасованому записі мовчки нічого не робить, тому перевіряємо стан заздалегідь.
+                    // Скасований або вже оплачений запис оплатити не можна — повідомляємо причину.
                     if (toPay.IsCancelled)
                     {
                         Console.WriteLine("Скасований запис оплатити не можна.");
@@ -624,9 +625,9 @@ void RunBillingMenu(BillingManager billingManager)
                         Console.WriteLine("Цей запис уже оплачено.");
                         break;
                     }
-                    toPay.MarkPaid();
-                    Console.WriteLine($"Запис [{toPay.Id}] оплачено: {toPay.Cost:F2} грн.");
-                    clinic.Logger.LogInfo($"Оплачено запис #{toPay.Id}: {toPay.Cost:F2} грн");
+                    // Оплату виконує менеджер рахунків: він сам піднімає PaymentReceived, а Logger запише це в лог.
+                    if (billingManager.PayAppointment(toPay.Id))
+                        Console.WriteLine($"Запис [{toPay.Id}] оплачено: {toPay.Cost:F2} грн.");
                     break;
                 }
             case "0": inMenu = false; break;
@@ -668,7 +669,6 @@ void RunPatientsMenu(PatientManager manager)
                     Console.Write("Телефон: "); string ph = Console.ReadLine()!;
                     Patient newPatient = new Patient(fn, ln, dob, bType, ph);
                     manager.Add(newPatient);
-                    clinic.Logger.LogInfo($"Додано пацієнта #{newPatient.Id}: {newPatient.FullName}");
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
@@ -842,13 +842,7 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
                     Console.Write("ID лікаря: "); int.TryParse(Console.ReadLine()!, out int did);
                     Console.Write("Дата та час: "); DateTime.TryParse(Console.ReadLine()!, out DateTime sched);
                     Console.Write("Тривалість (хв): "); int.TryParse(Console.ReadLine()!, out int dur);
-                    if (manager.Book(pid, did, sched, dur))
-                    {
-                        // Щойно створений запис — останній у менеджері; з нього беремо ID для журналу.
-                        Appointment? created = manager[manager.Count - 1];
-                        if (created != null)
-                            clinic.Logger.LogInfo($"Запис #{created.Id} створено: пацієнт #{pid} → лікар #{did}");
-                    }
+                    manager.Book(pid, did, sched, dur);
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
@@ -866,7 +860,6 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
                 if (manager.Cancel(cid))
                 {
                     Console.WriteLine($"Запис [{cid}] скасовано.");
-                    clinic.Logger.LogInfo($"Запис #{cid} скасовано");
                 }
                 else
                 {
@@ -878,14 +871,13 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
                 if (manager.Complete(fid))
                 {
                     Console.WriteLine($"Запис [{fid}] завершено.");
-                    clinic.Logger.LogInfo($"Запис #{fid} завершено");
                 }
                 else
                 {
                     Console.WriteLine("Не вдалося завершити: запис не знайдено або він уже не активний.");
                 }
                 break;
-            case "8": // Вимоги завд. 4: масове скасування через AppointmentManager.CancelAll
+            case "8": // Вимоги завд. 4: масове скасування через CancelAll
                 patients.DisplayAll();
                 Console.Write("Введіть ID пацієнта, записи якого треба скасувати: ");
                 if (int.TryParse(Console.ReadLine()!, out int patientId))
@@ -900,10 +892,8 @@ void RunAppointmentsMenu(AppointmentManager manager, PatientManager patients, Do
                         .Cast<ICancellable>()
                         .ToArray();
 
-                    int cancelledCount = AppointmentManager.CancelAll(patientItems, reason);
+                    int cancelledCount = manager.CancelAll(patientItems, reason);
                     Console.WriteLine($"Успішно скасовано записів: {cancelledCount}");
-                    if (cancelledCount > 0)
-                        clinic.Logger.LogInfo($"Скасовано записів пацієнта #{patientId}: {cancelledCount}");
                 }
                 break;
             case "9": // Перегляд записів за типом (GetUrgent / GetSpecialist / GetRegular)
