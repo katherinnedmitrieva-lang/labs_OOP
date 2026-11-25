@@ -34,6 +34,9 @@ public class Clinic
     // Генерація паспорта пацієнта (Лаба 13): другий незалежний підписник подій.
     public PatientPassportWriter Passport { get; }
 
+    // Підсумок сесії й реакція на події з іншої підсистеми — черги очікування (Лаба 13): третій підписник.
+    public SessionEventTracker Tracker { get; }
+
     public Clinic(string name)
     {
         Name = name;
@@ -50,6 +53,7 @@ public class Clinic
         Exporter = new ClinicExporter(this);
         Session = new SessionManager();
         Passport = new PatientPassportWriter(this);
+        Tracker = new SessionEventTracker(this);
 
         // В КІНЦІ конструктора: підписувати можна лише тоді, коли вже створено і менеджери (джерела подій),
         // і Logger (підписник).
@@ -73,6 +77,15 @@ public class Clinic
         Patients.PatientAdded += Passport.OnPatientAdded;
         Appointments.AppointmentCompleted += Passport.OnAppointmentCompleted;
         TreatmentPlans.PlanCompleted += Passport.OnPlanCompleted;
+
+        // Tracker підписаний на ВСІ події: одні й ті самі події слухають кілька незалежних підписників, і порядок між ними не важливий.
+        Patients.PatientAdded += Tracker.OnPatientAdded;
+        Appointments.AppointmentBooked += Tracker.OnAppointmentBooked;
+        Appointments.UrgentAppointmentBooked += Tracker.OnUrgentAppointmentBooked;
+        Appointments.AppointmentCancelled += Tracker.OnAppointmentCancelled;
+        Appointments.AppointmentCompleted += Tracker.OnAppointmentCompleted;
+        Billing.PaymentReceived += Tracker.OnPaymentReceived;
+        TreatmentPlans.PlanCompleted += Tracker.OnPlanCompleted;
     }
 
     public void DisplaySchedule(DateTime date)

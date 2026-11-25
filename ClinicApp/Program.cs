@@ -146,10 +146,33 @@ void RunMainMenu(Clinic activeClinic)
                     activeClinic.DisplaySchedule(date);
                 break;
             case "0":
+                // Підсумок сесії — ПЕРЕД збереженням сесії (за специфікацією).
+                ShowSessionSummary(activeClinic);
                 SaveSessionOnExit(activeClinic);
                 running = false;
                 break;
         }
+    }
+}
+
+// Підсумок сесії: у консоль і у файл session_summary.txt. Збій запису файлу не повинен заважати виходу з програми.
+void ShowSessionSummary(Clinic activeClinic)
+{
+    activeClinic.Tracker.PrintSummary();
+    try
+    {
+        activeClinic.Tracker.SaveSummary();
+        Console.WriteLine("Підсумок збережено у session_summary.txt.");
+    }
+    catch (IOException e)
+    {
+        Console.WriteLine("Не вдалося зберегти підсумок: " + e.Message);
+        activeClinic.Logger.LogError("Помилка збереження підсумку сесії: " + e.Message);
+    }
+    catch (UnauthorizedAccessException e)
+    {
+        Console.WriteLine("Немає доступу до файлу підсумку: " + e.Message);
+        activeClinic.Logger.LogError("Помилка збереження підсумку сесії: " + e.Message);
     }
 }
 
