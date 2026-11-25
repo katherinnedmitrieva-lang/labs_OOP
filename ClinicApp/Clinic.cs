@@ -31,6 +31,9 @@ public class Clinic
     // Збереження пацієнтів між запусками у файл session.dat (Лаба 12).
     public SessionManager Session { get; }
 
+    // Генерація паспорта пацієнта (Лаба 13): другий незалежний підписник подій.
+    public PatientPassportWriter Passport { get; }
+
     public Clinic(string name)
     {
         Name = name;
@@ -46,6 +49,7 @@ public class Clinic
         Logger = new ClinicLogger();
         Exporter = new ClinicExporter(this);
         Session = new SessionManager();
+        Passport = new PatientPassportWriter(this);
 
         // В КІНЦІ конструктора: підписувати можна лише тоді, коли вже створено і менеджери (джерела подій),
         // і Logger (підписник).
@@ -64,6 +68,11 @@ public class Clinic
         Appointments.AppointmentCompleted += Logger.OnAppointmentCompleted;
         Billing.PaymentReceived += Logger.OnPaymentReceived;
         TreatmentPlans.PlanCompleted += Logger.OnPlanCompleted;
+
+        // Паспорт пацієнта оновлюється при реєстрації, після завершеного прийому і після завершеного плану.
+        Patients.PatientAdded += Passport.OnPatientAdded;
+        Appointments.AppointmentCompleted += Passport.OnAppointmentCompleted;
+        TreatmentPlans.PlanCompleted += Passport.OnPlanCompleted;
     }
 
     public void DisplaySchedule(DateTime date)
