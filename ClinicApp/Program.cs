@@ -4,6 +4,7 @@ using System.Threading;
 using ClinicApp;
 using ClinicApp.Comparators;
 using ClinicApp.Enums;
+using ClinicApp.Events;
 using ClinicApp.Interfaces;
 using ClinicApp.Managers;
 using ClinicApp.Models;
@@ -14,6 +15,10 @@ Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
 Clinic clinic = new Clinic("Медична Клініка \"Здоров'я\"");
+
+// Підписка на подію ДО створення початкових даних: подія, піднята до підписки, пропадає — її ніхто не почує.
+// Методу передаємо без дужок (це посилання на метод, а не його виклик): += додає його до списку обробників події.
+clinic.Appointments.AppointmentBooked += OnAppointmentBookedConsole;
 
 Patient p1 = new Patient("Іван", "Петренко", new DateTime(1985, 3, 12), BloodType.APositive, "0501234567");
 Patient p2 = new Patient("Олена", "Коваль", new DateTime(1993, 7, 4), BloodType.BNegative, "0672345678");
@@ -1058,6 +1063,14 @@ void RunMedicalRecordsMenu(Clinic activeClinic)
             case "0": inMenu = false; break;
         }
     }
+}
+
+// Обробник події AppointmentBooked: виводить рядок у консоль. Сигнатура (object? sender, AppointmentEventArgs e)
+// визначається делегатом EventHandler<AppointmentEventArgs>. static — бо обробник не користується локальними змінними.
+// У коді меню немає жодного виклику цього методу: його викликає сама подія.
+static void OnAppointmentBookedConsole(object? sender, AppointmentEventArgs e)
+{
+    Console.WriteLine($"  [EVENT] Запис #{e.AppointmentId} створено: пацієнт #{e.PatientId} → лікар #{e.DoctorId}, {e.ScheduledAt:dd.MM.yyyy HH:mm}");
 }
 
 // Текст помилки для журналу: .NET дописує до ArgumentException технічний суфікс « (Parameter 'phone')» —

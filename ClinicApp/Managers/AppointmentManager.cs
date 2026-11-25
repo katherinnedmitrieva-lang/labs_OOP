@@ -1,4 +1,5 @@
-﻿using ClinicApp.Interfaces;
+﻿using ClinicApp.Events;
+using ClinicApp.Interfaces;
 using ClinicApp.Models;
 using System;
 
@@ -15,6 +16,12 @@ public class AppointmentManager
     private DoctorManager _doctorManager;
 
     public int Count => _count;
+
+    // Подія «запис створено». Піднімається після КОЖНОГО успішного створення запису будь-якого типу
+    // (звичайного, термінового, консультації). Менеджер не знає, хто на неї підписаний і чи є підписники взагалі.
+    // event, а не просте поле-делегат: ззовні класу можна лише підписатися (+=) і відписатися (-=);
+    // присвоїти = null чи викликати подію напряму не можна. «?» означає, що підписників може не бути.
+    public event EventHandler<AppointmentEventArgs>? AppointmentBooked;
 
     public Appointment? this[int index]
     {
@@ -62,7 +69,22 @@ public class AppointmentManager
         _appointments[_count] = app;
         _count++;
         Console.WriteLine($"Запис [{app.Id}] успішно створено на {app.ScheduledAt:dd.MM.yyyy HH:mm}.");
+
+        // Book, BookUrgent і BookSpecialist проходять через цей метод, тому подія піднімається тут — один раз для всіх трьох.
+        // ?.Invoke — безпечний виклик: без підписників подія дорівнює null, і звичайний виклик кинув би NullReferenceException.
+        // this — відправник події (sender): сам менеджер.
+        AppointmentBooked?.Invoke(this, CreateBookingArgs(app));
         return true;
+    }
+
+    // Дані для події створення запису. У Notes — причина терміновості (для термінового запису)
+    // або тема консультації (для консультації); для звичайного запису Notes порожній.
+    private static AppointmentEventArgs CreateBookingArgs(Appointment app)
+    {
+        string notes = "";
+        if (app is UrgentAppointment urgent) notes = urgent.UrgencyNote;
+        else if (app is SpecialistAppointment specialist) notes = specialist.ConsultationTopic;
+        return new AppointmentEventArgs(app.Id, app.PatientId, app.DoctorId, app.ScheduledAt, notes);
     }
 
     public Appointment? FindById(int id)
